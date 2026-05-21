@@ -12,7 +12,7 @@
       "name": "When chat message received",
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "position": [
-        -304,
+        -900,
         0
       ],
       "webhookId": "915bc421-1a4d-462a-9d1b-00fc63bc8815",
@@ -26,8 +26,8 @@
       "name": "Ollama Chat Model - Supervisor",
       "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
       "position": [
-        -16,
-        112
+        -600,
+        220
       ],
       "parameters": {
         "model": "qwen2.5:7b-instruct-q4_K_M",
@@ -49,8 +49,8 @@
       "name": "Read_Emails",
       "type": "n8n-nodes-base.gmailTool",
       "position": [
-        0,
-        528
+        80,
+        220
       ],
       "webhookId": "f98c2c89-fe58-4f00-8f33-a4bd9b037823",
       "parameters": {
@@ -72,8 +72,8 @@
       "name": "Draft_Email",
       "type": "n8n-nodes-base.gmailTool",
       "position": [
-        112,
-        544
+        220,
+        220
       ],
       "webhookId": "44a246e0-461c-43cd-8ec7-bdf28c13349e",
       "parameters": {
@@ -97,8 +97,8 @@
       "name": "Send_Email",
       "type": "n8n-nodes-base.gmailTool",
       "position": [
-        224,
-        528
+        360,
+        220
       ],
       "webhookId": "71895a77-2550-48ca-8cfd-a99957f85f79",
       "parameters": {
@@ -119,16 +119,15 @@
           "name": "YOUR_GMAIL"
         }
       },
-      "typeVersion": 2.2,
-      "disabled": true
+      "typeVersion": 2.2
     },
     {
       "id": "e0e6bfd8-2bd3-47a7-ad72-1c892c01c1ee",
       "name": "Check_Calendar",
       "type": "n8n-nodes-base.googleCalendarTool",
       "position": [
-        496,
-        544
+        720,
+        220
       ],
       "parameters": {
         "options": {},
@@ -157,8 +156,8 @@
       "name": "Book_Meeting",
       "type": "n8n-nodes-base.googleCalendarTool",
       "position": [
-        624,
-        544
+        880,
+        220
       ],
       "parameters": {
         "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
@@ -179,16 +178,15 @@
           "name": "YOUR_GOOGLE_CALENDAR"
         }
       },
-      "typeVersion": 1.3,
-      "disabled": true
+      "typeVersion": 1.3
     },
     {
       "id": "0b9a02fa-039c-4061-bbb1-33f4b4508a01",
       "name": "Cancel_Meeting",
       "type": "n8n-nodes-base.googleCalendarTool",
       "position": [
-        752,
-        544
+        1200,
+        220
       ],
       "parameters": {
         "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
@@ -209,16 +207,15 @@
           "name": "YOUR_GOOGLE_CALENDAR"
         }
       },
-      "typeVersion": 1.3,
-      "disabled": true
+      "typeVersion": 1.3
     },
     {
       "id": "6b36f0d8-edae-4c94-8d19-445d52f40639",
       "name": "Simple Memory",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "position": [
-        96,
-        160
+        -420,
+        220
       ],
       "parameters": {
         "sessionKey": "={{ $json.sessionId }}",
@@ -232,8 +229,8 @@
       "name": "Inbox_Agent",
       "type": "@n8n/n8n-nodes-langchain.agentTool",
       "position": [
-        32,
-        320
+        -120,
+        0
       ],
       "parameters": {
         "text": "=You are the user's Inbox Specialist Agent. You have access to Gmail tools.\n\nLANGUAGE:\n- If the user writes Hebrew, summarize and respond in Hebrew.\n- Email drafts should match the user's requested language, or match the original email language if not specified.\n\nALLOWED WITHOUT APPROVAL:\n- Read unread emails.\n- Summarize emails.\n- Prepare Gmail drafts.\n- Edit Gmail drafts/content when the user provides edits.\n\nREQUIRES EXPLICIT APPROVAL:\n- Sending emails.\n- Adding recipients and sending.\n- Any destructive or external irreversible email action.\n\nTELEGRAM/CHAT EDITING PROTOCOL:\nWhen preparing a draft, return the following editable block:\nORIGINAL EMAIL:\n- From:\n- Subject:\n- Summary:\n- Needs action: yes/no\n\nPROPOSED DRAFT:\n- To:\n- CC:\n- BCC:\n- Subject:\n- Body:\n\nEDIT OPTIONS:\nTell the user they can reply with:\n/to ...\n/cc ...\n/bcc ...\n/subject ...\n/body ...\n/no_draft_sender ...\n/no_draft_domain ...\n/no_draft_thread ...\n/approve\n/reject\n\nRULES:\n1. Use Read_Emails for email summaries and context.\n2. Use Draft_Email to prepare or update responses.\n3. Always return the exact draft text to the Supervisor.\n4. Use Send_Email ONLY if the Supervisor explicitly says the user approved sending with APPROVE SEND EMAIL or /approve.\n5. If the user asks not to suggest drafts for this sender/thread/domain, do not draft; return the suppression rule that should be saved.\n\n---\nINSTRUCTIONS FROM SUPERVISOR:\n{{ $fromAI('task', 'The specific email context, recipient, approval state, and edit commands to execute', 'string') }}",
@@ -247,8 +244,8 @@
       "name": "Calendar_Agent",
       "type": "@n8n/n8n-nodes-langchain.agentTool",
       "position": [
-        480,
-        304
+        560,
+        0
       ],
       "parameters": {
         "text": "=You are the user's Calendar Specialist Agent. You have access to Google Calendar tools.\n\nLANGUAGE:\n- If the user writes Hebrew, answer in Hebrew.\n- Timezone is always Asia/Jerusalem unless the user states another timezone.\n\nALLOWED WITHOUT APPROVAL:\n- Check availability.\n- List events.\n- Summarize schedule.\n\nREQUIRES EXPLICIT APPROVAL:\n- Book meeting.\n- Edit/update meeting.\n- Cancel/delete meeting.\n\nTELEGRAM/CHAT EDITING PROTOCOL:\nWhen proposing a calendar action, return the following editable block:\nCALENDAR ACTION PROPOSAL:\n- Action: book/update/cancel\n- Event ID if existing:\n- Title:\n- Start:\n- End:\n- Location:\n- Description/Notes:\n- Attendees:\n- Conflicts:\n\nEDIT OPTIONS:\nTell the user they can reply with:\n/title ...\n/time YYYY-MM-DD HH:mm-HH:mm\n/location ...\n/notes ...\n/attendees ...\n/approve\n/reject\n\nRULES:\n1. Always use Check_Calendar before booking, editing, or canceling.\n2. For booking, verify the slot is free and return proposed details first.\n3. For editing, find and confirm the exact event ID first, then return the proposed updated details.\n4. For canceling, find and confirm the exact event ID first.\n5. Use Book_Meeting, Update_Meeting, or Cancel_Meeting ONLY if the Supervisor explicitly says the user approved the specific action.\n\n---\nINSTRUCTIONS FROM SUPERVISOR:\n{{ $fromAI('task', 'The specific date, time, event ID, approval state, and edit commands to execute', 'string') }}",
@@ -262,8 +259,8 @@
       "name": "Ollama Chat Model - Inbox",
       "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
       "position": [
-        -64,
-        416
+        -220,
+        220
       ],
       "parameters": {
         "model": "qwen2.5:7b-instruct-q4_K_M",
@@ -285,8 +282,8 @@
       "name": "Ollama Chat Model - Calendar",
       "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
       "position": [
-        432,
-        432
+        480,
+        220
       ],
       "parameters": {
         "model": "qwen2.5:7b-instruct-q4_K_M",
@@ -308,7 +305,7 @@
       "name": "SUPERVISOR",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "position": [
-        208,
+        -560,
         0
       ],
       "parameters": {
@@ -325,14 +322,14 @@
       "name": "Sticky Note",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -432,
-        -256
+        -1120,
+        -520
       ],
       "parameters": {
         "color": "#E0BEBE",
-        "width": 368,
-        "height": 416,
-        "content": "# Chat Entry Point\n\nThis workflow starts when a user sends a message through the n8n Chat interface.\n\nThe chat input becomes the central command for the AI Supervisor Agent.  \nExamples:\n- \"Summarize my unread emails\"\n- \"Book a meeting tomorrow at 4 PM\"\n- \"Draft a reply to John\"\n"
+        "width": 440,
+        "height": 260,
+        "content": "# Chat Entry Point\n\nStarts when a user sends a message through n8n Chat.\n\nExamples:\n- Summarize unread emails\n- Draft a reply\n- Find calendar availability\n- Book a meeting after approval"
       },
       "typeVersion": 1
     },
@@ -341,14 +338,14 @@
       "name": "Sticky Note1",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        96,
-        -192
+        -640,
+        -520
       ],
       "parameters": {
         "color": "#CFB5D9",
-        "width": 416,
-        "height": 336,
-        "content": "# Supervisor AI Agent\n\nThe Supervisor Agent:\n- Understands the user's intent\n- Decides which specialist agent should handle the task\n- Coordinates multi-step actions\n- Combines results into a clean final response\n\n\n\n"
+        "width": 440,
+        "height": 260,
+        "content": "# Supervisor AI Agent\n\nRoutes user requests to the Inbox or Calendar specialist.\n\nThe Supervisor must ask for explicit approval before instructing tools to send email or change calendar events."
       },
       "typeVersion": 1
     },
@@ -357,14 +354,14 @@
       "name": "Sticky Note2",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -128,
-        288
+        -1120,
+        820
       ],
       "parameters": {
-        "color": "#8CB9D9",
-        "width": 480,
-        "height": 384,
-        "content": "# Local Ollama Models\n\nThis workflow uses a local Ollama server instead of OpenAI.\n\nAfter import, open each Ollama Chat Model node and select/create the Ollama credential:\n- Base URL: http://LOCAL_OLLAMA_HOST:11434\n- Model: qwen2.5:7b-instruct-q4_K_M\n"
+        "color": "#FF6B6B",
+        "width": 500,
+        "height": 300,
+        "content": "# REQUIRED: Ollama Configuration\n\nConfigure every Ollama Chat Model node:\n- Ollama Chat Model - Supervisor\n- Ollama Chat Model - Inbox\n- Ollama Chat Model - Calendar\n\nReplace placeholder credential:\nREPLACE_WITH_YOUR_OLLAMA_CREDENTIAL_ID\n\nConfirm base URL and model are reachable from the n8n container."
       },
       "typeVersion": 1
     },
@@ -373,14 +370,14 @@
       "name": "Sticky Note3",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -384,
-        560
+        -560,
+        820
       ],
       "parameters": {
-        "color": "#ADC2D1",
-        "width": 352,
-        "height": 432,
-        "content": "# Inbox Specialist Agent\n\nThis AI agent is dedicated to handling all Gmail-related operations.\n\nCapabilities:\n- Read unread emails\n- Summarize inbox activity\n- Draft professional replies\n- Send approved emails\n\nThe agent follows strict safety rules:\n- Never sends emails without explicit user approval\n- Always returns drafted content before sending\n\nThis creates a safe human-in-the-loop email assistant."
+        "color": "#FF6B6B",
+        "width": 520,
+        "height": 320,
+        "content": "# REQUIRED: Gmail Configuration\n\nConfigure Gmail OAuth credentials on:\n- Read_Emails\n- Draft_Email\n- Send_Email\n\nReplace placeholder credential:\ncredential-id / YOUR_GMAIL\n\nRequired safety test:\n- Read email\n- Create draft\n- Send only after explicit approval command"
       },
       "typeVersion": 1
     },
@@ -389,14 +386,14 @@
       "name": "Sticky Note4",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        368,
-        288
+        640,
+        820
       ],
       "parameters": {
-        "color": "#B1DB95",
-        "width": 496,
-        "height": 384,
-        "content": "# Safe Mode / Approval Flow\n\nDangerous tools are included as connected AI tools, but disabled at node level:\n- Send_Email\n- Book_Meeting\n- Update_Meeting\n- Cancel_Meeting\n\nCurrent workflow can read/summarize/check/draft only while those nodes stay disabled.\n\nNext phase: add Telegram or n8n Chat approval before enabling dangerous tools.\n"
+        "color": "#FF6B6B",
+        "width": 560,
+        "height": 340,
+        "content": "# APPROVAL-GATED ACTION TOOLS ENABLED\n\nThe following tools are enabled:\n- Send_Email\n- Book_Meeting\n- Update_Meeting\n- Cancel_Meeting\n\nThey must only run after the user gives explicit approval:\n- APPROVE SEND EMAIL or /approve\n- APPROVE BOOK MEETING or /approve\n- APPROVE UPDATE MEETING or /approve\n- APPROVE CANCEL MEETING or /approve\n\nDo not activate production until this is tested in staging."
       },
       "typeVersion": 1
     },
@@ -405,14 +402,14 @@
       "name": "Sticky Note5",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        768,
-        96
+        20,
+        820
       ],
       "parameters": {
-        "color": "#C0DBAD",
-        "width": 368,
-        "height": 368,
-        "content": "# Calendar Specialist Agent\n\nThis AI agent manages all Google Calendar operations.\n\nCapabilities:\n- Check availability\n- Book meetings\n- Cancel events\n- Handle scheduling requests\n\nThe agent always verifies calendar availability before booking or deleting events to avoid scheduling conflicts."
+        "color": "#FF6B6B",
+        "width": 560,
+        "height": 340,
+        "content": "# REQUIRED: Google Calendar Configuration\n\nConfigure Google Calendar OAuth credentials on:\n- Check_Calendar\n- Book_Meeting\n- Update_Meeting\n- Cancel_Meeting\n\nReplace placeholder credential:\ncredential-id / YOUR_GOOGLE_CALENDAR\n\nRequired safety test:\n- Check availability first\n- Book/update/cancel only after explicit approval command"
       },
       "typeVersion": 1
     },
@@ -421,14 +418,14 @@
       "name": "Sticky Note6",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -736,
-        256
+        -160,
+        -520
       ],
       "parameters": {
         "color": "#ECDD93",
-        "width": 512,
-        "height": 256,
-        "content": "# Workflow Overview - Safe Personal Assistant\n\nThis workflow is a safe personal productivity assistant for the user.\n\nThe Supervisor Agent receives chat requests and delegates to specialist agents:\n- Inbox Agent: Gmail read/summarize/draft\n- Calendar Agent: calendar availability and schedule summaries\n\nIt uses a local Ollama server.\n\nIn this safe import version, actions that change the outside world are disabled until an approval flow is added.\n"
+        "width": 500,
+        "height": 260,
+        "content": "# Workflow Overview\n\nSafe personal productivity assistant.\n\nThe graph below contains real action tools. The approval protocol in the prompts is the safety gate, so prompt review and staging tests are required before production activation."
       },
       "typeVersion": 1
     },
@@ -437,8 +434,8 @@
       "name": "Update_Meeting",
       "type": "n8n-nodes-base.googleCalendarTool",
       "position": [
-        880,
-        544
+        1040,
+        220
       ],
       "parameters": {
         "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
@@ -465,39 +462,38 @@
           "name": "YOUR_GOOGLE_CALENDAR"
         }
       },
-      "typeVersion": 1.3,
-      "disabled": true
+      "typeVersion": 1.3
     },
     {
       "id": "b20383e3-1887-4121-8d52-1eef6b846995",
       "name": "Sticky Note - Telegram Approval Editing",
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -736,
-        560
+        380,
+        -520
       ],
       "parameters": {
         "color": "#F3DFA2",
         "width": 640,
-        "height": 520,
-        "content": "# Telegram Approval / Editing Protocol\n\nThis workflow is designed so the user edits and approves actions in Telegram/chat before execution.\n\n## Email editing commands\n- `/to email1@example.com, email2@example.com`\n- `/cc email@example.com`\n- `/bcc email@example.com`\n- `/subject new subject`\n- `/body new body text`\n- `/no_draft_sender sender@example.com`\n- `/no_draft_domain example.com`\n- `/no_draft_thread THREAD_ID`\n- `/approve`\n- `/reject`\n\n## Calendar editing commands\n- `/title new event title`\n- `/time YYYY-MM-DD HH:mm-HH:mm`\n- `/location location text`\n- `/notes notes text`\n- `/attendees email1@example.com, email2@example.com`\n- `/approve`\n- `/reject`\n\n## Safety\nSend_Email, Book_Meeting, Update_Meeting, and Cancel_Meeting are connected as agent tools in the template, but disabled at node level in this staged safe copy. For production-grade execution, split approval into a separate workflow with Telegram callback buttons and pending-action storage before enabling them."
+        "height": 360,
+        "content": "# Approval / Editing Protocol\n\nSupported commands:\n- /to, /cc, /bcc, /subject, /body\n- /title, /time, /location, /notes, /attendees\n- /approve\n- /reject\n\nThe agents must show the exact draft or calendar action before using Send_Email, Book_Meeting, Update_Meeting, or Cancel_Meeting."
       },
       "typeVersion": 1
     },
     {
       "parameters": {
         "color": "#FF6B6B",
-        "width": 560,
-        "height": 500,
-        "content": "# REQUIRED BEFORE PRODUCTION\n\nComplete these items before activating this workflow:\n\n## n8n production checklist\n- Set up error notifications or an error workflow.\n- Configure time saved tracking if you want reporting.\n- Enable MCP access only if this workflow must be exposed to MCP clients.\n\n## Credentials and models\n- Select real Gmail OAuth credentials on Gmail tool nodes.\n- Select real Google Calendar OAuth credentials on Calendar tool nodes.\n- Select/create the Ollama credential on every Ollama Chat Model node.\n- Confirm the Ollama base URL and model are reachable from n8n.\n\n## Safety review\n- Keep Send_Email, Book_Meeting, Update_Meeting, and Cancel_Meeting disabled until the approval flow is fully tested.\n- Review all prompts and permissions before activating production."
+        "width": 620,
+        "height": 460,
+        "content": "# REQUIRED BEFORE PRODUCTION\n\nComplete these items before activating this workflow:\n\n## n8n production checklist\n- Set up error notifications or an error workflow.\n- Configure time saved tracking if you want reporting.\n- Enable MCP access only if this workflow must be exposed to MCP clients.\n\n## Credentials and models\n- Configure all red credential notes on this canvas.\n- Confirm Gmail, Calendar, and Ollama permissions before activation.\n\n## Safety review\n- Dangerous tools are enabled, but prompts require explicit approval first.\n- Test approval phrases and /approve flow in staging before production."
       },
       "id": "4ab2506b-46b2-4e48-88c3-1e36292914aa",
       "name": "Sticky Note - Required Production Setup",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -900,
-        -760
+        -1120,
+        -1040
       ]
     }
   ],
