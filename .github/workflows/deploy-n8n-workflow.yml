@@ -10,26 +10,53 @@ on:
   workflow_dispatch:
     inputs:
       workflow_path:
-        description: "Workflow JSON path under staging/"
+        description: "Workflow JSON path under staging/, or all"
         required: false
-        default: "staging/personal-productivity-safe.json"
+        default: "all"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger n8n staging deploy
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Trigger n8n staging deploys
         env:
           N8N_DEPLOY_WEBHOOK_URL: ${{ secrets.N8N_DEPLOY_WEBHOOK_URL }}
           N8N_DEPLOY_WEBHOOK_SECRET: ${{ secrets.N8N_DEPLOY_WEBHOOK_SECRET }}
-          WORKFLOW_PATH: ${{ github.event.inputs.workflow_path || 'staging/personal-productivity-safe.json' }}
+          WORKFLOW_PATH: ${{ github.event_name == 'workflow_dispatch' && inputs.workflow_path || 'all' }}
         run: |
-          curl -fsS -X POST "$N8N_DEPLOY_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -H "X-N8N-Deploy-Secret: $N8N_DEPLOY_WEBHOOK_SECRET" \
-            -d "{
-              \"repository\": { \"full_name\": \"${{ github.repository }}\" },
-              \"ref\": \"refs/heads/${{ github.ref_name }}\",
-              \"workflow_path\": \"$WORKFLOW_PATH\"
-            }"
+          set -euo pipefail
+
+          if [ "$WORKFLOW_PATH" = "all" ]; then
+            mapfile -t workflow_paths < <(find staging -maxdepth 1 -type f -name '*.json' | sort)
+          else
+            workflow_paths=("$WORKFLOW_PATH")
+          fi
+
+          for workflow_path in "${workflow_paths[@]}"; do
+            case "$workflow_path" in
+              staging/github-staging-approval-deploy.json)
+                echo "Skipping deploy workflow: $workflow_path"
+                continue
+                ;;
+              staging/*.json)
+                ;;
+              *)
+                echo "Refusing non-staging workflow path: $workflow_path" >&2
+                exit 1
+                ;;
+            esac
+
+            echo "Deploying $workflow_path"
+            curl -fsS -X POST "$N8N_DEPLOY_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -H "X-N8N-Deploy-Secret: $N8N_DEPLOY_WEBHOOK_SECRET" \
+              -d "{
+                \"repository\": { \"full_name\": \"${{ github.repository }}\" },
+                \"ref\": \"refs/heads/${{ github.ref_name }}\",
+                \"workflow_path\": \"$workflow_path\"
+              }"
+          done

@@ -127,6 +127,8 @@ The repository includes `.github/workflows/deploy-n8n-workflow.yml`.
 
 The action runs when a file under `staging/*.json` changes on `main`, or when you run it manually from the GitHub Actions tab.
 
+By default, the action deploys every `staging/*.json` workflow except `staging/github-staging-approval-deploy.json` itself. Manual runs can pass one specific `workflow_path`, or use `all`.
+
 GitHub's regular webhook UI cannot send the custom `X-N8N-Deploy-Secret` header used by the n8n workflow. The GitHub Action sends that header with `curl`, so no separate GitHub webhook is required.
 
 Use the production n8n webhook URL in GitHub Actions:
@@ -257,7 +259,7 @@ GITHUB_TOKEN=
 Notes:
 
 - The GitHub webhook should send `X-N8N-Deploy-Secret` with the same value as `DEPLOY_WEBHOOK_SECRET`.
-- The default deployed file is `staging/personal-productivity-safe.json`.
-- A webhook payload can override it with `workflow_path`, but the workflow only accepts paths under `staging/`.
+- The GitHub Action deploys all `staging/*.json` workflow files by default, skipping `staging/github-staging-approval-deploy.json`.
+- A webhook payload can override the n8n default with `workflow_path`, but the workflow only accepts paths under `staging/`.
 - Staging and production imports force `active=false`; activate production manually after review.
 - Production promotion copies the staged file to `/files/git/production/<workflow>.json` and imports that copy.
