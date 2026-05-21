@@ -21,24 +21,37 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Trigger n8n staging deploys
         env:
           N8N_DEPLOY_WEBHOOK_URL: ${{ secrets.N8N_DEPLOY_WEBHOOK_URL }}
           N8N_DEPLOY_WEBHOOK_SECRET: ${{ secrets.N8N_DEPLOY_WEBHOOK_SECRET }}
-          WORKFLOW_PATH: ${{ github.event_name == 'workflow_dispatch' && inputs.workflow_path || 'all' }}
+          WORKFLOW_PATH: ${{ github.event_name == 'workflow_dispatch' && inputs.workflow_path || 'changed' }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
 
           if [ "$WORKFLOW_PATH" = "all" ]; then
             mapfile -t workflow_paths < <(find staging -maxdepth 1 -type f -name '*.json' | sort)
+          elif [ "$WORKFLOW_PATH" = "changed" ]; then
+            if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+              mapfile -t workflow_paths < <(find staging -maxdepth 1 -type f -name '*.json' | sort)
+            else
+              mapfile -t workflow_paths < <(git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" -- 'staging/*.json' | sort)
+            fi
           else
             workflow_paths=("$WORKFLOW_PATH")
           fi
 
+          deployed=0
           for workflow_path in "${workflow_paths[@]}"; do
+            workflow_path="${workflow_path#./}"
+
             case "$workflow_path" in
-              staging/github-staging-approval-deploy.json)
+              staging/github-staging-approval-deploy.json|*/github-staging-approval-deploy.json)
                 echo "Skipping deploy workflow: $workflow_path"
                 continue
                 ;;
@@ -51,6 +64,7 @@ jobs:
             esac
 
             echo "Deploying $workflow_path"
+            deployed=$((deployed + 1))
             curl -fsS -X POST "$N8N_DEPLOY_WEBHOOK_URL" \
               -H "Content-Type: application/json" \
               -H "X-N8N-Deploy-Secret: $N8N_DEPLOY_WEBHOOK_SECRET" \
@@ -60,3 +74,7 @@ jobs:
                 \"workflow_path\": \"$workflow_path\"
               }"
           done
+
+          if [ "$deployed" -eq 0 ]; then
+            echo "No deployable staging workflow changes found."
+          fi
