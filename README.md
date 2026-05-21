@@ -172,6 +172,7 @@ Required by `staging/github-staging-approval-deploy.json`:
 PUBLIC_N8N_BASE_URL=http://n8n.example.com:5678
 N8N_PROXY_HOPS=1
 N8N_PUSH_BACKEND=websocket
+N8N_BLOCK_ENV_ACCESS_IN_NODE=false
 DEPLOY_WEBHOOK_SECRET=use-a-long-random-shared-secret
 DEPLOY_APPROVAL_TOKEN=use-a-long-random-approval-token
 TELEGRAM_BOT_TOKEN=telegram-bot-token-from-botfather
