@@ -122,7 +122,7 @@ TELEGRAM_APPROVAL_CHAT_ID=telegram-chat-id
 Optional environment variables:
 
 ```text
-DEPLOY_REPO=NirBY/n8n-workflows
+DEPLOY_REPO=OWNER/REPO
 DEPLOY_BRANCH=refs/heads/main
 DEPLOY_WORKFLOW_PATH=staging/personal-productivity-safe.json
 GITHUB_TOKEN=

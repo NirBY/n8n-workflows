@@ -1,7 +1,7 @@
 {
   "id": "ZemG6UGO2KVDib8r",
   "meta": {
-    "instanceId": "277842713620d9f5554de3b1518b865a152c8c4db680008bd8aec536fc18b4a8",
+    "instanceId": "template-instance-id",
     "templateCredsSetupCompleted": false
   },
   "name": "Personal productivity - Gmail Calendar Telegram Approval Ollama v2",
@@ -39,7 +39,7 @@
       "credentials": {
         "ollamaApi": {
           "id": "REPLACE_WITH_YOUR_OLLAMA_CREDENTIAL_ID",
-          "name": "Mac mini Ollama"
+          "name": "Local Ollama"
         }
       },
       "typeVersion": 1
@@ -57,7 +57,7 @@
         "filters": {},
         "operation": "getAll",
         "descriptionType": "manual",
-        "toolDescription": "Fetches unread emails from the founder's Gmail inbox. Use this when asked to summarize emails, check for new messages, or retrieve the context of a specific conversation."
+        "toolDescription": "Fetches unread emails from the user's Gmail inbox. Use this when asked to summarize emails, check for new messages, or retrieve the context of a specific conversation."
       },
       "credentials": {
         "gmailOAuth2": {
@@ -82,7 +82,7 @@
         "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
         "resource": "draft",
         "descriptionType": "manual",
-        "toolDescription": "Creates a draft in Gmail but does NOT send it. Use this to prepare an email response for the founder to review later in their Gmail app."
+        "toolDescription": "Creates a draft in Gmail but does NOT send it. Use this to prepare an email response for the user to review later in their Gmail app."
       },
       "credentials": {
         "gmailOAuth2": {
@@ -105,13 +105,13 @@
         "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
         "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
         "options": {
-          "senderName": "Jitesh",
+          "senderName": "Personal Assistant",
           "appendAttribution": false
         },
         "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
         "emailType": "text",
         "descriptionType": "manual",
-        "toolDescription": "Sends an email directly. Use ONLY after Nir explicitly approved the exact To/CC/BCC/Subject/Body via Telegram/chat. Before sending, the Inbox_Agent must have shown the full original email summary and final edited draft. Never use from an unapproved request."
+        "toolDescription": "Sends an email directly. Use ONLY after the user explicitly approved the exact To/CC/BCC/Subject/Body via Telegram/chat. Before sending, the Inbox_Agent must have shown the full original email summary and final edited draft. Never use from an unapproved request."
       },
       "credentials": {
         "gmailOAuth2": {
@@ -142,7 +142,7 @@
         },
         "operation": "getAll",
         "descriptionType": "manual",
-        "toolDescription": "Retrieves events from the founder's Google Calendar for a specified date or time range. Use this to check availability before booking any meeting, or to find the details/ID of an existing meeting before canceling it."
+        "toolDescription": "Retrieves events from the user's Google Calendar for a specified date or time range. Use this to check availability before booking any meeting, or to find the details/ID of an existing meeting before canceling it."
       },
       "credentials": {
         "googleCalendarOAuth2Api": {
@@ -170,7 +170,7 @@
           "cachedResultName": "Primary Calendar"
         },
         "descriptionType": "manual",
-        "toolDescription": "Creates a Google Calendar event. Use ONLY after Check_Calendar verified availability and Nir explicitly approved the exact title/start/end/location/attendees via Telegram/chat.",
+        "toolDescription": "Creates a Google Calendar event. Use ONLY after Check_Calendar verified availability and the user explicitly approved the exact title/start/end/location/attendees via Telegram/chat.",
         "additionalFields": {}
       },
       "credentials": {
@@ -201,7 +201,7 @@
         },
         "operation": "delete",
         "descriptionType": "manual",
-        "toolDescription": "Deletes/cancels a Google Calendar event. Use ONLY after Check_Calendar confirmed the exact event and Nir explicitly approved cancellation via Telegram/chat."
+        "toolDescription": "Deletes/cancels a Google Calendar event. Use ONLY after Check_Calendar confirmed the exact event and the user explicitly approved cancellation via Telegram/chat."
       },
       "credentials": {
         "googleCalendarOAuth2Api": {
@@ -236,7 +236,7 @@
         320
       ],
       "parameters": {
-        "text": "=You are Nir's Inbox Specialist Agent. You have access to Gmail tools.\n\nLANGUAGE:\n- If Nir writes Hebrew, summarize and respond in Hebrew.\n- Email drafts should match Nir's requested language, or match the original email language if not specified.\n\nALLOWED WITHOUT APPROVAL:\n- Read unread emails.\n- Summarize emails.\n- Prepare Gmail drafts.\n- Edit Gmail drafts/content when Nir provides edits.\n\nREQUIRES EXPLICIT APPROVAL:\n- Sending emails.\n- Adding recipients and sending.\n- Any destructive or external irreversible email action.\n\nTELEGRAM/CHAT EDITING PROTOCOL:\nWhen preparing a draft, return the following editable block:\nORIGINAL EMAIL:\n- From:\n- Subject:\n- Summary:\n- Needs action: yes/no\n\nPROPOSED DRAFT:\n- To:\n- CC:\n- BCC:\n- Subject:\n- Body:\n\nEDIT OPTIONS:\nTell Nir he can reply with:\n/to ...\n/cc ...\n/bcc ...\n/subject ...\n/body ...\n/no_draft_sender ...\n/no_draft_domain ...\n/no_draft_thread ...\n/approve\n/reject\n\nRULES:\n1. Use Read_Emails for email summaries and context.\n2. Use Draft_Email to prepare or update responses.\n3. Always return the exact draft text to the Supervisor.\n4. Use Send_Email ONLY if the Supervisor explicitly says Nir approved sending with APPROVE SEND EMAIL or /approve.\n5. If Nir asks not to suggest drafts for this sender/thread/domain, do not draft; return the suppression rule that should be saved.\n\n---\nINSTRUCTIONS FROM SUPERVISOR:\n{{ $fromAI('task', 'The specific email context, recipient, approval state, and edit commands to execute', 'string') }}",
+        "text": "=You are the user's Inbox Specialist Agent. You have access to Gmail tools.\n\nLANGUAGE:\n- If the user writes Hebrew, summarize and respond in Hebrew.\n- Email drafts should match the user's requested language, or match the original email language if not specified.\n\nALLOWED WITHOUT APPROVAL:\n- Read unread emails.\n- Summarize emails.\n- Prepare Gmail drafts.\n- Edit Gmail drafts/content when the user provides edits.\n\nREQUIRES EXPLICIT APPROVAL:\n- Sending emails.\n- Adding recipients and sending.\n- Any destructive or external irreversible email action.\n\nTELEGRAM/CHAT EDITING PROTOCOL:\nWhen preparing a draft, return the following editable block:\nORIGINAL EMAIL:\n- From:\n- Subject:\n- Summary:\n- Needs action: yes/no\n\nPROPOSED DRAFT:\n- To:\n- CC:\n- BCC:\n- Subject:\n- Body:\n\nEDIT OPTIONS:\nTell the user they can reply with:\n/to ...\n/cc ...\n/bcc ...\n/subject ...\n/body ...\n/no_draft_sender ...\n/no_draft_domain ...\n/no_draft_thread ...\n/approve\n/reject\n\nRULES:\n1. Use Read_Emails for email summaries and context.\n2. Use Draft_Email to prepare or update responses.\n3. Always return the exact draft text to the Supervisor.\n4. Use Send_Email ONLY if the Supervisor explicitly says the user approved sending with APPROVE SEND EMAIL or /approve.\n5. If the user asks not to suggest drafts for this sender/thread/domain, do not draft; return the suppression rule that should be saved.\n\n---\nINSTRUCTIONS FROM SUPERVISOR:\n{{ $fromAI('task', 'The specific email context, recipient, approval state, and edit commands to execute', 'string') }}",
         "options": {},
         "toolDescription": "Handles safe email operations: reading, summarizing, and drafting. Sending must go through explicit approval flow."
       },
@@ -251,7 +251,7 @@
         304
       ],
       "parameters": {
-        "text": "=You are Nir's Calendar Specialist Agent. You have access to Google Calendar tools.\n\nLANGUAGE:\n- If Nir writes Hebrew, answer in Hebrew.\n- Timezone is always Asia/Jerusalem unless Nir states another timezone.\n\nALLOWED WITHOUT APPROVAL:\n- Check availability.\n- List events.\n- Summarize schedule.\n\nREQUIRES EXPLICIT APPROVAL:\n- Book meeting.\n- Edit/update meeting.\n- Cancel/delete meeting.\n\nTELEGRAM/CHAT EDITING PROTOCOL:\nWhen proposing a calendar action, return the following editable block:\nCALENDAR ACTION PROPOSAL:\n- Action: book/update/cancel\n- Event ID if existing:\n- Title:\n- Start:\n- End:\n- Location:\n- Description/Notes:\n- Attendees:\n- Conflicts:\n\nEDIT OPTIONS:\nTell Nir he can reply with:\n/title ...\n/time YYYY-MM-DD HH:mm-HH:mm\n/location ...\n/notes ...\n/attendees ...\n/approve\n/reject\n\nRULES:\n1. Always use Check_Calendar before booking, editing, or canceling.\n2. For booking, verify the slot is free and return proposed details first.\n3. For editing, find and confirm the exact event ID first, then return the proposed updated details.\n4. For canceling, find and confirm the exact event ID first.\n5. Use Book_Meeting, Update_Meeting, or Cancel_Meeting ONLY if the Supervisor explicitly says Nir approved the specific action.\n\n---\nINSTRUCTIONS FROM SUPERVISOR:\n{{ $fromAI('task', 'The specific date, time, event ID, approval state, and edit commands to execute', 'string') }}",
+        "text": "=You are the user's Calendar Specialist Agent. You have access to Google Calendar tools.\n\nLANGUAGE:\n- If the user writes Hebrew, answer in Hebrew.\n- Timezone is always Asia/Jerusalem unless the user states another timezone.\n\nALLOWED WITHOUT APPROVAL:\n- Check availability.\n- List events.\n- Summarize schedule.\n\nREQUIRES EXPLICIT APPROVAL:\n- Book meeting.\n- Edit/update meeting.\n- Cancel/delete meeting.\n\nTELEGRAM/CHAT EDITING PROTOCOL:\nWhen proposing a calendar action, return the following editable block:\nCALENDAR ACTION PROPOSAL:\n- Action: book/update/cancel\n- Event ID if existing:\n- Title:\n- Start:\n- End:\n- Location:\n- Description/Notes:\n- Attendees:\n- Conflicts:\n\nEDIT OPTIONS:\nTell the user they can reply with:\n/title ...\n/time YYYY-MM-DD HH:mm-HH:mm\n/location ...\n/notes ...\n/attendees ...\n/approve\n/reject\n\nRULES:\n1. Always use Check_Calendar before booking, editing, or canceling.\n2. For booking, verify the slot is free and return proposed details first.\n3. For editing, find and confirm the exact event ID first, then return the proposed updated details.\n4. For canceling, find and confirm the exact event ID first.\n5. Use Book_Meeting, Update_Meeting, or Cancel_Meeting ONLY if the Supervisor explicitly says the user approved the specific action.\n\n---\nINSTRUCTIONS FROM SUPERVISOR:\n{{ $fromAI('task', 'The specific date, time, event ID, approval state, and edit commands to execute', 'string') }}",
         "options": {},
         "toolDescription": "Handles safe calendar operations: checking availability and preparing booking/cancel approval requests."
       },
@@ -275,7 +275,7 @@
       "credentials": {
         "ollamaApi": {
           "id": "REPLACE_WITH_YOUR_OLLAMA_CREDENTIAL_ID",
-          "name": "Mac mini Ollama"
+          "name": "Local Ollama"
         }
       },
       "typeVersion": 1
@@ -298,7 +298,7 @@
       "credentials": {
         "ollamaApi": {
           "id": "REPLACE_WITH_YOUR_OLLAMA_CREDENTIAL_ID",
-          "name": "Mac mini Ollama"
+          "name": "Local Ollama"
         }
       },
       "typeVersion": 1
@@ -314,7 +314,7 @@
       "parameters": {
         "text": "={{ $json.chatInput }}",
         "options": {
-          "systemMessage": "You are Nir's Executive Supervisor AI.\n\nYou receive Nir's requests from n8n Chat or Telegram and delegate tasks to specialist agents.\n\nLANGUAGE RULES:\n- If Nir writes in Hebrew, answer in Hebrew.\n- If Nir writes in English, answer in English.\n- Keep internal tool instructions precise and structured.\n- All dates/times are Asia/Jerusalem unless Nir says otherwise.\n\nEMAIL/CALENDAR SAFETY RULES:\n- You may read emails, summarize emails, check calendar, and create/update Gmail drafts.\n- Sending email, booking calendar events, editing calendar events, canceling calendar events, deleting/archiving emails, or marking emails as read requires explicit approval.\n- Approval must come from Nir in Telegram or n8n Chat with a clear command such as:\n  APPROVE SEND EMAIL\n  APPROVE BOOK MEETING\n  APPROVE UPDATE MEETING\n  APPROVE CANCEL MEETING\n- If approval is missing, return a clear approval request instead of executing the action.\n\nTELEGRAM EDITING PROTOCOL:\nWhen an email draft or calendar action is proposed, show Nir the full editable fields and ask him to reply with edits in Telegram/chat.\nSupported edit commands:\n- /to email1@example.com, email2@example.com\n- /cc email@example.com\n- /bcc email@example.com\n- /subject new subject\n- /body new body text\n- /time YYYY-MM-DD HH:mm-HH:mm\n- /title new event title\n- /location location text\n- /notes notes text\n- /no_draft_sender sender@example.com\n- /no_draft_domain example.com\n- /no_draft_thread THREAD_ID\n- /approve\n- /reject\n\nEMAIL DELEGATION:\n- Email tasks go to Inbox_Agent.\n- Inbox_Agent must show original email summary, suggested draft, To, CC, BCC, Subject, Body.\n- If Nir edits fields, pass the updated fields to Inbox_Agent.\n- If Nir asks not to suggest drafts for a sender/thread/domain, confirm the suppression rule. If a suppression storage tool is not available, clearly tell Nir to add it to the suppression list workflow.\n\nCALENDAR DELEGATION:\n- Calendar tasks go to Calendar_Agent.\n- Calendar_Agent must check availability before proposing booking/update/cancel.\n- Calendar_Agent must show exact event details before any modification.\n- If Nir edits title/time/location/notes/attendees, pass updated fields to Calendar_Agent.\n\nNever invent email/calendar details. Use tools for real data. Always present final result clearly."
+          "systemMessage": "You are the user's Executive Supervisor AI.\n\nYou receive the user's requests from n8n Chat or Telegram and delegate tasks to specialist agents.\n\nLANGUAGE RULES:\n- If the user writes in Hebrew, answer in Hebrew.\n- If the user writes in English, answer in English.\n- Keep internal tool instructions precise and structured.\n- All dates/times are Asia/Jerusalem unless the user says otherwise.\n\nEMAIL/CALENDAR SAFETY RULES:\n- You may read emails, summarize emails, check calendar, and create/update Gmail drafts.\n- Sending email, booking calendar events, editing calendar events, canceling calendar events, deleting/archiving emails, or marking emails as read requires explicit approval.\n- Approval must come from the user in Telegram or n8n Chat with a clear command such as:\n  APPROVE SEND EMAIL\n  APPROVE BOOK MEETING\n  APPROVE UPDATE MEETING\n  APPROVE CANCEL MEETING\n- If approval is missing, return a clear approval request instead of executing the action.\n\nTELEGRAM EDITING PROTOCOL:\nWhen an email draft or calendar action is proposed, show the user the full editable fields and ask them to reply with edits in Telegram/chat.\nSupported edit commands:\n- /to email1@example.com, email2@example.com\n- /cc email@example.com\n- /bcc email@example.com\n- /subject new subject\n- /body new body text\n- /time YYYY-MM-DD HH:mm-HH:mm\n- /title new event title\n- /location location text\n- /notes notes text\n- /no_draft_sender sender@example.com\n- /no_draft_domain example.com\n- /no_draft_thread THREAD_ID\n- /approve\n- /reject\n\nEMAIL DELEGATION:\n- Email tasks go to Inbox_Agent.\n- Inbox_Agent must show original email summary, suggested draft, To, CC, BCC, Subject, Body.\n- If the user edits fields, pass the updated fields to Inbox_Agent.\n- If the user asks not to suggest drafts for a sender/thread/domain, confirm the suppression rule. If a suppression storage tool is not available, clearly tell the user to add it to the suppression list workflow.\n\nCALENDAR DELEGATION:\n- Calendar tasks go to Calendar_Agent.\n- Calendar_Agent must check availability before proposing booking/update/cancel.\n- Calendar_Agent must show exact event details before any modification.\n- If the user edits title/time/location/notes/attendees, pass updated fields to Calendar_Agent.\n\nNever invent email/calendar details. Use tools for real data. Always present final result clearly."
         },
         "promptType": "define"
       },
@@ -364,7 +364,7 @@
         "color": "#8CB9D9",
         "width": 480,
         "height": 384,
-        "content": "# Local Ollama Models\n\nThis workflow uses local Ollama on the Mac mini instead of OpenAI.\n\nAfter import, open each Ollama Chat Model node and select/create the Ollama credential:\n- Base URL: http://MAC_MINI_TAILSCALE_IP:11434\n- Model: qwen2.5:7b-instruct-q4_K_M\n"
+        "content": "# Local Ollama Models\n\nThis workflow uses a local Ollama server instead of OpenAI.\n\nAfter import, open each Ollama Chat Model node and select/create the Ollama credential:\n- Base URL: http://LOCAL_OLLAMA_HOST:11434\n- Model: qwen2.5:7b-instruct-q4_K_M\n"
       },
       "typeVersion": 1
     },
@@ -428,7 +428,7 @@
         "color": "#ECDD93",
         "width": 512,
         "height": 256,
-        "content": "# Workflow Overview - Safe Personal Assistant\n\nThis workflow is a safe personal productivity assistant for Nir.\n\nThe Supervisor Agent receives chat requests and delegates to specialist agents:\n- Inbox Agent: Gmail read/summarize/draft\n- Calendar Agent: calendar availability and schedule summaries\n\nIt uses local Ollama on the Mac mini.\n\nIn this safe import version, actions that change the outside world are disabled until an approval flow is added.\n"
+        "content": "# Workflow Overview - Safe Personal Assistant\n\nThis workflow is a safe personal productivity assistant for the user.\n\nThe Supervisor Agent receives chat requests and delegates to specialist agents:\n- Inbox Agent: Gmail read/summarize/draft\n- Calendar Agent: calendar availability and schedule summaries\n\nIt uses a local Ollama server.\n\nIn this safe import version, actions that change the outside world are disabled until an approval flow is added.\n"
       },
       "typeVersion": 1
     },
@@ -452,7 +452,7 @@
         "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
         "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
         "descriptionType": "manual",
-        "toolDescription": "Updates an existing Google Calendar event ONLY after explicit approval. You MUST run Check_Calendar first, confirm the exact event ID, show the proposed changes to Nir, and use this tool only when the Supervisor says Nir approved the update.",
+        "toolDescription": "Updates an existing Google Calendar event ONLY after explicit approval. You MUST run Check_Calendar first, confirm the exact event ID, show the proposed changes to the user, and use this tool only when the Supervisor says the user approved the update.",
         "additionalFields": {
           "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Title', ``, 'string') }}",
           "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', ``, 'string') }}",
@@ -480,7 +480,7 @@
         "color": "#F3DFA2",
         "width": 640,
         "height": 520,
-        "content": "# Telegram Approval / Editing Protocol\n\nThis workflow is designed so Nir edits and approves actions in Telegram/chat before execution.\n\n## Email editing commands\n- `/to email1@example.com, email2@example.com`\n- `/cc email@example.com`\n- `/bcc email@example.com`\n- `/subject new subject`\n- `/body new body text`\n- `/no_draft_sender sender@example.com`\n- `/no_draft_domain example.com`\n- `/no_draft_thread THREAD_ID`\n- `/approve`\n- `/reject`\n\n## Calendar editing commands\n- `/title new event title`\n- `/time YYYY-MM-DD HH:mm-HH:mm`\n- `/location location text`\n- `/notes notes text`\n- `/attendees email1@example.com, email2@example.com`\n- `/approve`\n- `/reject`\n\n## Safety\nSend_Email, Book_Meeting, Update_Meeting, and Cancel_Meeting are connected as agent tools in the template, but disabled at node level in this staged safe copy. For production-grade execution, split approval into a separate workflow with Telegram callback buttons and pending-action storage before enabling them."
+        "content": "# Telegram Approval / Editing Protocol\n\nThis workflow is designed so the user edits and approves actions in Telegram/chat before execution.\n\n## Email editing commands\n- `/to email1@example.com, email2@example.com`\n- `/cc email@example.com`\n- `/bcc email@example.com`\n- `/subject new subject`\n- `/body new body text`\n- `/no_draft_sender sender@example.com`\n- `/no_draft_domain example.com`\n- `/no_draft_thread THREAD_ID`\n- `/approve`\n- `/reject`\n\n## Calendar editing commands\n- `/title new event title`\n- `/time YYYY-MM-DD HH:mm-HH:mm`\n- `/location location text`\n- `/notes notes text`\n- `/attendees email1@example.com, email2@example.com`\n- `/approve`\n- `/reject`\n\n## Safety\nSend_Email, Book_Meeting, Update_Meeting, and Cancel_Meeting are connected as agent tools in the template, but disabled at node level in this staged safe copy. For production-grade execution, split approval into a separate workflow with Telegram callback buttons and pending-action storage before enabling them."
       },
       "typeVersion": 1
     }
