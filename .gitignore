@@ -1,0 +1,17 @@
+# Local secrets and environment
+.env
+.env.*
+!.env.example
+credentials*
+*.credentials.json
+
+# n8n runtime data should not live in this repo
+.n8n/
+database.sqlite
+
+# Temporary exports and editor files
+*.tmp
+*.bak
+workflows.json
+.DS_Store
+Thumbs.db
