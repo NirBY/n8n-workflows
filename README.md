@@ -144,6 +144,7 @@ DEPLOY_WEBHOOK_SECRET=use-a-long-random-shared-secret
 DEPLOY_APPROVAL_TOKEN=use-a-long-random-approval-token
 TELEGRAM_BOT_TOKEN=telegram-bot-token-from-botfather
 TELEGRAM_APPROVAL_CHAT_ID=telegram-chat-id-that-receives-approval-messages
+NODES_EXCLUDE=[]
 ```
 
 Optional:
@@ -156,6 +157,8 @@ GITHUB_TOKEN=
 ```
 
 Set `GITHUB_TOKEN` only if n8n must download workflow files from a private repository. For a public repository, leave it empty.
+
+`NODES_EXCLUDE=[]` is required because the deployment workflow uses n8n's `Execute Command` node to run the local import commands inside the n8n container. Some n8n versions disable this node by default for security. Only enable it on a trusted self-hosted n8n instance.
 
 ### GitHub Actions Secrets
 
@@ -206,6 +209,7 @@ DEPLOY_WEBHOOK_SECRET=random-shared-secret-for-github-webhook
 DEPLOY_APPROVAL_TOKEN=random-token-for-telegram-approval-link
 TELEGRAM_BOT_TOKEN=telegram-bot-token
 TELEGRAM_APPROVAL_CHAT_ID=telegram-chat-id
+NODES_EXCLUDE=[]
 ```
 
 Optional environment variables:
