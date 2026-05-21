@@ -9,8 +9,9 @@ n8n-workflows/
 ├── production/
 │   └── personal-productivity-safe.json
 ├── staging/
-│   ├── github-staging-approval-deploy.json
 │   └── personal-productivity-safe.json
+├── controller/
+│   └── github-staging-approval-deploy.json
 ├── prompts/
 │   ├── supervisor.md
 │   ├── inbox-agent.md
@@ -127,7 +128,7 @@ The repository includes `.github/workflows/deploy-n8n-workflow.yml`.
 
 The action runs when a file under `staging/*.json` changes on `main`, or when you run it manually from the GitHub Actions tab.
 
-On push, the action deploys only the changed `staging/*.json` files. It always skips `staging/github-staging-approval-deploy.json` because that file is the deploy controller itself. Manual runs can pass one specific `workflow_path`, or use `all` to deploy every staging workflow except the deploy controller.
+On push, the action deploys only the changed `staging/*.json` files. Manual runs can pass one specific `workflow_path`, or use `all` to deploy every staging workflow. The deploy controller lives under `controller/`, outside the deployable staging folder.
 
 GitHub's regular webhook UI cannot send the custom `X-N8N-Deploy-Secret` header used by the n8n workflow. The GitHub Action sends that header with `curl`, so no separate GitHub webhook is required.
 
@@ -168,7 +169,7 @@ Before activating automation, configure the variables below.
 
 ### n8n Environment Variables
 
-Required by `staging/github-staging-approval-deploy.json`:
+Required by `controller/github-staging-approval-deploy.json`:
 
 ```text
 PUBLIC_N8N_BASE_URL=http://n8n.example.com:5678
@@ -220,7 +221,7 @@ The action will not appear in GitHub until `.github/workflows/deploy-n8n-workflo
 
 ## First Deployment Workflow
 
-`staging/github-staging-approval-deploy.json` implements:
+`controller/github-staging-approval-deploy.json` implements:
 
 ```text
 GitHub webhook
@@ -259,7 +260,7 @@ GITHUB_TOKEN=
 Notes:
 
 - The GitHub webhook should send `X-N8N-Deploy-Secret` with the same value as `DEPLOY_WEBHOOK_SECRET`.
-- On push, the GitHub Action deploys changed `staging/*.json` workflow files, skipping `staging/github-staging-approval-deploy.json`.
+- On push, the GitHub Action deploys changed `staging/*.json` workflow files.
 - On manual runs, use `workflow_path=all` to deploy all deployable staging workflows.
 - A webhook payload can override the n8n default with `workflow_path`, but the workflow only accepts paths under `staging/`.
 - Staging and production imports force `active=false`; activate production manually after review.

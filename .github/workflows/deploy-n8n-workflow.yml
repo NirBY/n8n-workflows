@@ -51,10 +51,6 @@ jobs:
             workflow_path="${workflow_path#./}"
 
             case "$workflow_path" in
-              staging/github-staging-approval-deploy.json|*/github-staging-approval-deploy.json)
-                echo "Skipping deploy workflow: $workflow_path"
-                continue
-                ;;
               staging/*.json)
                 ;;
               *)
