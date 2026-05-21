@@ -178,6 +178,7 @@ N8N_PUSH_BACKEND=websocket
 N8N_BLOCK_ENV_ACCESS_IN_NODE=false
 DEPLOY_WEBHOOK_SECRET=use-a-long-random-shared-secret
 DEPLOY_APPROVAL_TOKEN=use-a-long-random-approval-token
+DEPLOY_PUBLISH_STAGING=true
 TELEGRAM_BOT_TOKEN=telegram-bot-token-from-botfather
 TELEGRAM_APPROVAL_CHAT_ID=telegram-chat-id-that-receives-approval-messages
 NODES_EXCLUDE=[]
@@ -195,6 +196,10 @@ GITHUB_TOKEN=
 Set `GITHUB_TOKEN` only if n8n must download workflow files from a private repository. For a public repository, leave it empty.
 
 `NODES_EXCLUDE=[]` is required because the deployment workflow uses n8n's `Execute Command` node to run the local import commands inside the n8n container. Some n8n versions disable this node by default for security. Only enable it on a trusted self-hosted n8n instance.
+
+`DEPLOY_PUBLISH_STAGING=true` publishes imported staging workflows after import. Production promotion still imports workflows unpublished/inactive for final manual review.
+
+If a staging workflow still appears unpublished after the CLI publish step, restart the n8n container. n8n's server CLI publish/unpublish commands update the database directly, and n8n documents that running instances may need a restart before those changes take effect.
 
 ### GitHub Actions Secrets
 
@@ -243,6 +248,7 @@ Required environment variables:
 PUBLIC_N8N_BASE_URL=https://your-n8n-host
 DEPLOY_WEBHOOK_SECRET=random-shared-secret-for-github-webhook
 DEPLOY_APPROVAL_TOKEN=random-token-for-telegram-approval-link
+DEPLOY_PUBLISH_STAGING=true
 TELEGRAM_BOT_TOKEN=telegram-bot-token
 TELEGRAM_APPROVAL_CHAT_ID=telegram-chat-id
 NODES_EXCLUDE=[]

@@ -67,6 +67,7 @@ services:
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=${N8N_BLOCK_ENV_ACCESS_IN_NODE}
       - DEPLOY_WEBHOOK_SECRET=${DEPLOY_WEBHOOK_SECRET}
       - DEPLOY_APPROVAL_TOKEN=${DEPLOY_APPROVAL_TOKEN}
+      - DEPLOY_PUBLISH_STAGING=${DEPLOY_PUBLISH_STAGING}
 
       # Enable Execute Command for the deployment workflow.
       # Only use this on a trusted self-hosted n8n instance.
