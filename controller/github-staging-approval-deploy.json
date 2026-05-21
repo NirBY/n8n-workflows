@@ -1,238 +1,242 @@
 {
-    "name":  "GitHub Staging Approval Deploy - Staging",
-    "active":  false,
-    "nodes":  [
-                  {
-                      "parameters":  {
-                                         "httpMethod":  "POST",
-                                         "path":  "github-workflow-deploy",
-                                         "responseMode":  "onReceived",
-                                         "options":  {
-
-                                                     }
-                                     },
-                      "id":  "f75aa466-6a95-4ef5-b8b3-d6e91c5a0f20",
-                      "name":  "GitHub Deploy Webhook",
-                      "type":  "n8n-nodes-base.webhook",
-                      "typeVersion":  2,
-                      "position":  [
-                                       -900,
-                                       -180
-                                   ],
-                      "webhookId":  "github-workflow-deploy"
-                  },
-                  {
-                      "parameters":  {
-                                         "jsCode":  "const item = $input.first().json;\nconst body = item.body || item;\nconst headers = item.headers || {};\nconst headerSecret = headers[\u0027x-n8n-deploy-secret\u0027] || headers[\u0027X-N8N-Deploy-Secret\u0027];\nif (!$env.DEPLOY_WEBHOOK_SECRET) {\n  throw new Error(\u0027DEPLOY_WEBHOOK_SECRET is required\u0027);\n}\nif (headerSecret !== $env.DEPLOY_WEBHOOK_SECRET) {\n  throw new Error(\u0027Invalid deploy webhook secret\u0027);\n}\nconst repo = body.repository?.full_name || $env.DEPLOY_REPO || \u0027OWNER/REPO\u0027;\nif (!/^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$/.test(repo)) {\n  throw new Error(`Refusing unsafe repo: ${repo}`);\n}\nconst ref = body.ref || $env.DEPLOY_BRANCH || \u0027refs/heads/main\u0027;\nconst branch = ref.replace(\u0027refs/heads/\u0027, \u0027\u0027);\nif (branch.includes(\u0027..\u0027) || !/^[A-Za-z0-9._/-]+$/.test(branch)) {\n  throw new Error(`Refusing unsafe branch: ${branch}`);\n}\nconst workflowPath = body.workflow_path || body.workflowPath || $env.DEPLOY_WORKFLOW_PATH || \u0027staging/personal-productivity-safe.json\u0027;\nif (!workflowPath.startsWith(\u0027staging/\u0027) || workflowPath.includes(\u0027..\u0027) || !/^[A-Za-z0-9._/-]+$/.test(workflowPath)) {\n  throw new Error(`Refusing unsafe workflow path: ${workflowPath}`);\n}\nconst fileName = workflowPath.split(\u0027/\u0027).pop();\nconst stagingInput = `/files/git/${workflowPath}`;\nconst productionInput = `/files/git/production/${fileName}`;\nconst downloadUrl = `https://raw.githubusercontent.com/${repo}/${branch}/${workflowPath}`;\nconst displayName = fileName.replace(/\\.json$/, \u0027\u0027).replace(/[-_]/g, \u0027 \u0027);\nconst publishStaging = String($env.DEPLOY_PUBLISH_STAGING || \u0027\u0027).toLowerCase() === \u0027true\u0027;\nconst downloadJson = `const fs=require(\u0027fs\u0027);const [url,out]=process.argv.slice(1);const headers={};if(process.env.GITHUB_TOKEN)headers.Authorization=\u0027Bearer \u0027+process.env.GITHUB_TOKEN;fetch(url,{headers}).then(async r=\u003e{if(!r.ok)throw new Error(\u0027Download failed \u0027+r.status+\u0027 \u0027+r.statusText);fs.writeFileSync(out,await r.text());}).catch(e=\u003e{console.error(e.message);process.exit(1);});`;\nconst hardenJson = `const fs=require(\u0027fs\u0027);const p=process.argv[1];const n=process.argv[2];const j=JSON.parse(fs.readFileSync(p,\u0027utf8\u0027));j.active=false;j.name=(j.name||n)+\u0027 - Staging Candidate\u0027;fs.writeFileSync(p,JSON.stringify(j,null,2));`;\nconst readIdJson = `const fs=require(\u0027fs\u0027);const j=JSON.parse(fs.readFileSync(process.argv[1],\u0027utf8\u0027));process.stdout.write(j.id||\u0027\u0027);`;\nconst importCommandParts = [\n  `mkdir -p \u0027/files/git/staging\u0027`,\n  `node -e \"${downloadJson}\" \u0027${downloadUrl}\u0027 \u0027${stagingInput}\u0027`,\n  `node -e \"${hardenJson}\" \u0027${stagingInput}\u0027 \u0027${displayName}\u0027`,\n  `n8n import:workflow --input=\u0027${stagingInput}\u0027`\n];\nif (publishStaging) {\n  importCommandParts.push(`WORKFLOW_ID=$(node -e \"${readIdJson}\" \u0027${stagingInput}\u0027) \u0026\u0026 test -n \"$WORKFLOW_ID\" \u0026\u0026 n8n publish:workflow --id=\"$WORKFLOW_ID\"`);\n}\nconst importCommand = importCommandParts.join(\u0027 \u0026\u0026 \u0027);\nconst baseUrl = ($env.PUBLIC_N8N_BASE_URL || \u0027\u0027).replace(/\\/$/, \u0027\u0027);\nif (!baseUrl) {\n  throw new Error(\u0027PUBLIC_N8N_BASE_URL is required to build the Telegram approval link\u0027);\n}\nif (!$env.DEPLOY_APPROVAL_TOKEN) {\n  throw new Error(\u0027DEPLOY_APPROVAL_TOKEN is required\u0027);\n}\nconst approvalUrl = `${baseUrl}/webhook/workflow-promote-production?token=${encodeURIComponent($env.DEPLOY_APPROVAL_TOKEN)}\u0026source=${encodeURIComponent(stagingInput)}\u0026target=${encodeURIComponent(productionInput)}\u0026name=${encodeURIComponent(fileName)}`;\nconst telegramText = [\n  publishStaging ? \u0027Staging workflow import completed and publish was requested. Review it in n8n before approving production.\u0027 : \u0027Staging workflow import completed as an unpublished draft. Publish and review it in n8n before approving production.\u0027,\n  `Workflow: ${fileName}`,\n  `Repo: ${repo}`,\n  `Branch: ${branch}`,\n  `Source path: ${workflowPath}`,\n  `Publish staging: ${publishStaging}`\n].join(\u0027\\n\u0027);\nreturn [{ json: { repo, branch, workflowPath, fileName, stagingInput, productionInput, downloadUrl, approvalUrl, telegramText, publishStaging, importCommand } }];"
-                                     },
-                      "id":  "18da8094-5ea0-4ec8-a65d-66d741f3888f",
-                      "name":  "Prepare Staging Import",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       -660,
-                                       -180
-                                   ]
-                  },
-                  {
-                      "parameters":  {
-                                         "command":  "={{$json.importCommand}}"
-                                     },
-                      "id":  "a3fd60f9-6c7e-472a-99c4-84218cd6a7c7",
-                      "name":  "Import To Staging",
-                      "type":  "n8n-nodes-base.executeCommand",
-                      "typeVersion":  1,
-                      "position":  [
-                                       -420,
-                                       -180
-                                   ]
-                  },
-                  {
-                      "parameters":  {
-                                         "method":  "POST",
-                                         "url":  "={{\u0027https://api.telegram.org/bot\u0027 + $env.TELEGRAM_BOT_TOKEN + \u0027/sendMessage\u0027}}",
-                                         "sendBody":  true,
-                                         "specifyBody":  "json",
-                                         "jsonBody":  "={{ JSON.stringify({ chat_id: $env.TELEGRAM_APPROVAL_CHAT_ID, text: $node[\u0027Prepare Staging Import\u0027].json.telegramText, reply_markup: { inline_keyboard: [[{ text: \u0027Approve production import\u0027, url: $node[\u0027Prepare Staging Import\u0027].json.approvalUrl }]] } }) }}",
-                                         "options":  {
-
-                                                     }
-                                     },
-                      "id":  "f8b47121-1b39-4ff0-91b2-c82ab4218d0f",
-                      "name":  "Telegram Approval Request",
-                      "type":  "n8n-nodes-base.httpRequest",
-                      "typeVersion":  4.2,
-                      "position":  [
-                                       -180,
-                                       -180
-                                   ]
-                  },
-                  {
-                      "parameters":  {
-                                         "httpMethod":  "GET",
-                                         "path":  "workflow-promote-production",
-                                         "responseMode":  "responseNode",
-                                         "options":  {
-
-                                                     }
-                                     },
-                      "id":  "9dd0685c-1769-45e7-ac71-23e61ab2e3df",
-                      "name":  "Telegram Approval Webhook",
-                      "type":  "n8n-nodes-base.webhook",
-                      "typeVersion":  2,
-                      "position":  [
-                                       -900,
-                                       180
-                                   ],
-                      "webhookId":  "workflow-promote-production"
-                  },
-                  {
-                      "parameters":  {
-                                         "jsCode":  "const item = $input.first().json;\nconst query = item.query || {};\nif (!$env.DEPLOY_APPROVAL_TOKEN || query.token !== $env.DEPLOY_APPROVAL_TOKEN) {\n  throw new Error(\u0027Invalid production approval token\u0027);\n}\nconst source = query.source;\nconst target = query.target;\nconst name = query.name || \u0027workflow.json\u0027;\nif (!source?.startsWith(\u0027/files/git/staging/\u0027) || !target?.startsWith(\u0027/files/git/production/\u0027) || source.includes(\u0027..\u0027) || target.includes(\u0027..\u0027)) {\n  throw new Error(\u0027Refusing unsafe promotion paths\u0027);\n}\nconst displayName = name.replace(/\\.json$/, \u0027\u0027).replace(/[-_]/g, \u0027 \u0027);\nconst hardenJson = `const fs=require(\u0027fs\u0027);const crypto=require(\u0027crypto\u0027);const p=process.argv[1];const n=process.argv[2];const j=JSON.parse(fs.readFileSync(p,\u0027utf8\u0027));const productionId=crypto.createHash(\u0027sha256\u0027).update(\u0027production:\u0027+p).digest(\u0027base64url\u0027).replace(/[^A-Za-z0-9]/g,\u0027\u0027).slice(0,16);j.id=productionId;j.active=false;j.name=(j.name||n).replace(/ - Staging Candidate$/,\u0027\u0027)+\u0027 - Production Candidate\u0027;fs.writeFileSync(p,JSON.stringify(j,null,2));`;\nconst promoteCommand = [\n  `test -f \u0027${source}\u0027`,\n  `mkdir -p \u0027/files/git/production\u0027`,\n  `cp \u0027${source}\u0027 \u0027${target}\u0027`,\n  `node -e \"${hardenJson}\" \u0027${target}\u0027 \u0027${displayName}\u0027`,\n  `n8n import:workflow --input=\u0027${target}\u0027`\n].join(\u0027 \u0026\u0026 \u0027);\nconst telegramText = [\n  \u0027Production workflow import completed after approval.\u0027,\n  `Workflow: ${name}`,\n  `Imported file: ${target}`,\n  \u0027The imported workflow uses a stable production workflow ID and is forced inactive; activate it manually after final review.\u0027\n].join(\u0027\\n\u0027);\nreturn [{ json: { source, target, name, promoteCommand, telegramText, responseText: `Production import queued for ${name}. You can close this page.` } }];"
-                                     },
-                      "id":  "e4f6a370-8845-4bc9-8295-5ac06cc5a25a",
-                      "name":  "Prepare Production Promotion",
-                      "type":  "n8n-nodes-base.code",
-                      "typeVersion":  2,
-                      "position":  [
-                                       -660,
-                                       180
-                                   ]
-                  },
-                  {
-                      "parameters":  {
-                                         "command":  "={{$json.promoteCommand}}"
-                                     },
-                      "id":  "73a1f138-95bc-4075-b41d-7e243e0da751",
-                      "name":  "Import To Production",
-                      "type":  "n8n-nodes-base.executeCommand",
-                      "typeVersion":  1,
-                      "position":  [
-                                       -420,
-                                       180
-                                   ]
-                  },
-                  {
-                      "parameters":  {
-                                         "method":  "POST",
-                                         "url":  "={{\u0027https://api.telegram.org/bot\u0027 + $env.TELEGRAM_BOT_TOKEN + \u0027/sendMessage\u0027}}",
-                                         "sendBody":  true,
-                                         "specifyBody":  "json",
-                                         "jsonBody":  "={{ JSON.stringify({ chat_id: $env.TELEGRAM_APPROVAL_CHAT_ID, text: $node[\u0027Prepare Production Promotion\u0027].json.telegramText }) }}",
-                                         "options":  {
-
-                                                     }
-                                     },
-                      "id":  "94a00c1b-0ece-4712-9d7c-627985e93bc1",
-                      "name":  "Telegram Promotion Notice",
-                      "type":  "n8n-nodes-base.httpRequest",
-                      "typeVersion":  4.2,
-                      "position":  [
-                                       -180,
-                                       180
-                                   ]
-                  },
-                  {
-                      "parameters":  {
-                                         "respondWith":  "text",
-                                         "responseBody":  "={{$node[\u0027Prepare Production Promotion\u0027].json.responseText}}",
-                                         "options":  {
-
-                                                     }
-                                     },
-                      "id":  "ac0e6d70-a4ca-470b-bc5b-a740d40e0de5",
-                      "name":  "Approval Response",
-                      "type":  "n8n-nodes-base.respondToWebhook",
-                      "typeVersion":  1.1,
-                      "position":  [
-                                       60,
-                                       180
-                                   ]
-                  }
-              ],
-    "connections":  {
-                        "GitHub Deploy Webhook":  {
-                                                      "main":  [
-                                                                   [
-                                                                       {
-                                                                           "node":  "Prepare Staging Import",
-                                                                           "type":  "main",
-                                                                           "index":  0
-                                                                       }
-                                                                   ]
-                                                               ]
-                                                  },
-                        "Prepare Staging Import":  {
-                                                       "main":  [
-                                                                    [
-                                                                        {
-                                                                            "node":  "Import To Staging",
-                                                                            "type":  "main",
-                                                                            "index":  0
-                                                                        }
-                                                                    ]
-                                                                ]
-                                                   },
-                        "Import To Staging":  {
-                                                  "main":  [
-                                                               [
-                                                                   {
-                                                                       "node":  "Telegram Approval Request",
-                                                                       "type":  "main",
-                                                                       "index":  0
-                                                                   }
-                                                               ]
-                                                           ]
-                                              },
-                        "Telegram Approval Webhook":  {
-                                                          "main":  [
-                                                                       [
-                                                                           {
-                                                                               "node":  "Prepare Production Promotion",
-                                                                               "type":  "main",
-                                                                               "index":  0
-                                                                           }
-                                                                       ]
-                                                                   ]
-                                                      },
-                        "Prepare Production Promotion":  {
-                                                             "main":  [
-                                                                          [
-                                                                              {
-                                                                                  "node":  "Import To Production",
-                                                                                  "type":  "main",
-                                                                                  "index":  0
-                                                                              }
-                                                                          ]
-                                                                      ]
-                                                         },
-                        "Import To Production":  {
-                                                     "main":  [
-                                                                  [
-                                                                      {
-                                                                          "node":  "Telegram Promotion Notice",
-                                                                          "type":  "main",
-                                                                          "index":  0
-                                                                      }
-                                                                  ]
-                                                              ]
-                                                 },
-                        "Telegram Promotion Notice":  {
-                                                          "main":  [
-                                                                       [
-                                                                           {
-                                                                               "node":  "Approval Response",
-                                                                               "type":  "main",
-                                                                               "index":  0
-                                                                           }
-                                                                       ]
-                                                                   ]
-                                                      }
-                    },
-    "settings":  {
-                     "executionOrder":  "v1"
-                 },
-    "tags":  [
-
-             ]
+  "name": "GitHub Staging Approval Deploy - Staging",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github-workflow-deploy",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "f75aa466-6a95-4ef5-b8b3-d6e91c5a0f20",
+      "name": "GitHub Deploy Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -900,
+        -180
+      ],
+      "webhookId": "github-workflow-deploy"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst body = item.body || item;\nconst headers = item.headers || {};\nconst headerSecret = headers['x-n8n-deploy-secret'] || headers['X-N8N-Deploy-Secret'];\nif (!$env.DEPLOY_WEBHOOK_SECRET) {\n  throw new Error('DEPLOY_WEBHOOK_SECRET is required');\n}\nif (headerSecret !== $env.DEPLOY_WEBHOOK_SECRET) {\n  throw new Error('Invalid deploy webhook secret');\n}\nconst repo = body.repository?.full_name || $env.DEPLOY_REPO || 'OWNER/REPO';\nif (!/^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$/.test(repo)) {\n  throw new Error(`Refusing unsafe repo: ${repo}`);\n}\nconst ref = body.ref || $env.DEPLOY_BRANCH || 'refs/heads/main';\nconst branch = ref.replace('refs/heads/', '');\nif (branch.includes('..') || !/^[A-Za-z0-9._/-]+$/.test(branch)) {\n  throw new Error(`Refusing unsafe branch: ${branch}`);\n}\nconst workflowPath = body.workflow_path || body.workflowPath || $env.DEPLOY_WORKFLOW_PATH || 'staging/personal-productivity-safe.json';\nif (!workflowPath.startsWith('staging/') || workflowPath.includes('..') || !/^[A-Za-z0-9._/-]+$/.test(workflowPath)) {\n  throw new Error(`Refusing unsafe workflow path: ${workflowPath}`);\n}\nconst fileName = workflowPath.split('/').pop();\nconst stagingInput = `/files/git/${workflowPath}`;\nconst productionInput = `/files/git/production/${fileName}`;\nconst downloadUrl = `https://raw.githubusercontent.com/${repo}/${branch}/${workflowPath}`;\nconst displayName = fileName.replace(/\\.json$/, '').replace(/[-_]/g, ' ');\nconst publishStaging = String($env.DEPLOY_PUBLISH_STAGING || '').toLowerCase() === 'true';\nconst downloadJson = `const fs=require('fs');const [url,out]=process.argv.slice(1);const headers={};if(process.env.GITHUB_TOKEN)headers.Authorization='Bearer '+process.env.GITHUB_TOKEN;fetch(url,{headers}).then(async r=>{if(!r.ok)throw new Error('Download failed '+r.status+' '+r.statusText);fs.writeFileSync(out,await r.text());}).catch(e=>{console.error(e.message);process.exit(1);});`;\nconst hardenJson = `const fs=require('fs');const p=process.argv[1];const n=process.argv[2];const j=JSON.parse(fs.readFileSync(p,'utf8'));j.active=false;j.name=(j.name||n)+' - Staging Candidate';fs.writeFileSync(p,JSON.stringify(j,null,2));`;\nconst readIdJson = `const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.stdout.write(j.id||'');`;\nconst importCommandParts = [\n  `mkdir -p '/files/git/staging'`,\n  `node -e \"${downloadJson}\" '${downloadUrl}' '${stagingInput}'`,\n  `node -e \"${hardenJson}\" '${stagingInput}' '${displayName}'`,\n  `n8n import:workflow --input='${stagingInput}'`\n];\nif (publishStaging) {\n  importCommandParts.push(`WORKFLOW_ID=$(node -e \"${readIdJson}\" '${stagingInput}') && test -n \"$WORKFLOW_ID\" && n8n publish:workflow --id=\"$WORKFLOW_ID\"`);\n}\nconst importCommand = importCommandParts.join(' && ');\nconst baseUrl = ($env.PUBLIC_N8N_BASE_URL || '').replace(/\\/$/, '');\nif (!baseUrl) {\n  throw new Error('PUBLIC_N8N_BASE_URL is required to build the Telegram approval link');\n}\nif (!$env.DEPLOY_APPROVAL_TOKEN) {\n  throw new Error('DEPLOY_APPROVAL_TOKEN is required');\n}\nconst approvalUrl = `${baseUrl}/webhook/workflow-promote-production?token=${encodeURIComponent($env.DEPLOY_APPROVAL_TOKEN)}&source=${encodeURIComponent(stagingInput)}&target=${encodeURIComponent(productionInput)}&name=${encodeURIComponent(fileName)}`;\nconst telegramText = [\n  publishStaging ? 'Staging workflow import completed and publish was requested. Review it in n8n before approving production.' : 'Staging workflow import completed as an unpublished draft. Publish and review it in n8n before approving production.',\n  `Workflow: ${fileName}`,\n  `Repo: ${repo}`,\n  `Branch: ${branch}`,\n  `Source path: ${workflowPath}`,\n  `Publish staging: ${publishStaging}`\n].join('\\n');\nreturn [{ json: { repo, branch, workflowPath, fileName, stagingInput, productionInput, downloadUrl, approvalUrl, telegramText, publishStaging, importCommand } }];"
+      },
+      "id": "18da8094-5ea0-4ec8-a65d-66d741f3888f",
+      "name": "Prepare Staging Import",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -660,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "command": "={{$json.importCommand}}"
+      },
+      "id": "a3fd60f9-6c7e-472a-99c4-84218cd6a7c7",
+      "name": "Import To Staging",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage'}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.TELEGRAM_APPROVAL_CHAT_ID, text: $node['Prepare Staging Import'].json.telegramText, reply_markup: { inline_keyboard: [[{ text: 'Approve production import', url: $node['Prepare Staging Import'].json.approvalUrl }]] } }) }}",
+        "options": {}
+      },
+      "id": "f8b47121-1b39-4ff0-91b2-c82ab4218d0f",
+      "name": "Telegram Approval Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -180,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "workflow-promote-production",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9dd0685c-1769-45e7-ac71-23e61ab2e3df",
+      "name": "Telegram Approval Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -900,
+        180
+      ],
+      "webhookId": "workflow-promote-production"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst query = item.query || {};\nif (!$env.DEPLOY_APPROVAL_TOKEN || query.token !== $env.DEPLOY_APPROVAL_TOKEN) {\n  throw new Error('Invalid production approval token');\n}\nconst source = query.source;\nconst target = query.target;\nconst name = query.name || 'workflow.json';\nif (!source?.startsWith('/files/git/staging/') || !target?.startsWith('/files/git/production/') || source.includes('..') || target.includes('..')) {\n  throw new Error('Refusing unsafe promotion paths');\n}\nconst displayName = name.replace(/\\.json$/, '').replace(/[-_]/g, ' ');\nconst hardenJson = `const fs=require('fs');const crypto=require('crypto');const p=process.argv[1];const n=process.argv[2];const j=JSON.parse(fs.readFileSync(p,'utf8'));const productionId=crypto.createHash('sha256').update('production:'+p).digest('base64url').replace(/[^A-Za-z0-9]/g,'').slice(0,16);j.id=productionId;j.active=false;j.name=(j.name||n).replace(/ - Staging Candidate$/,'')+' - Production Candidate';fs.writeFileSync(p,JSON.stringify(j,null,2));`;\nconst promoteCommand = [\n  `test -f '${source}'`,\n  `mkdir -p '/files/git/production'`,\n  `cp '${source}' '${target}'`,\n  `node -e \"${hardenJson}\" '${target}' '${displayName}'`,\n  `n8n import:workflow --input='${target}'`\n].join(' && ');\nconst telegramText = [\n  'Production workflow import completed after approval.',\n  `Workflow: ${name}`,\n  `Imported file: ${target}`,\n  'The imported workflow uses a stable production workflow ID and is forced inactive; activate it manually after final review.'\n].join('\\n');\nreturn [{ json: { source, target, name, promoteCommand, telegramText, responseText: `Production import queued for ${name}. You can close this page.` } }];"
+      },
+      "id": "e4f6a370-8845-4bc9-8295-5ac06cc5a25a",
+      "name": "Prepare Production Promotion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -660,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "command": "={{$json.promoteCommand}}"
+      },
+      "id": "73a1f138-95bc-4075-b41d-7e243e0da751",
+      "name": "Import To Production",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage'}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.TELEGRAM_APPROVAL_CHAT_ID, text: $node['Prepare Production Promotion'].json.telegramText }) }}",
+        "options": {}
+      },
+      "id": "94a00c1b-0ece-4712-9d7c-627985e93bc1",
+      "name": "Telegram Promotion Notice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -180,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{$node['Prepare Production Promotion'].json.responseText}}",
+        "options": {}
+      },
+      "id": "ac0e6d70-a4ca-470b-bc5b-a740d40e0de5",
+      "name": "Approval Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        60,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "color": "#FF6B6B",
+        "width": 560,
+        "height": 500,
+        "content": "# REQUIRED BEFORE ACTIVATION\n\nComplete these items before activating this deploy controller:\n\n## n8n production checklist\n- Set up error notifications or an error workflow.\n- Configure time saved tracking if you want reporting.\n- Enable MCP access only if this workflow must be exposed to MCP clients.\n\n## Deployment configuration\n- Configure DEPLOY_WEBHOOK_SECRET in n8n and GitHub Actions.\n- Configure DEPLOY_APPROVAL_TOKEN.\n- Configure TELEGRAM_BOT_TOKEN and TELEGRAM_APPROVAL_CHAT_ID.\n- Configure PUBLIC_N8N_BASE_URL and webhook URLs.\n- Confirm NODES_EXCLUDE=[] and N8N_BLOCK_ENV_ACCESS_IN_NODE=false are set.\n\n## Safety review\n- Keep production imports inactive until reviewed manually.\n- Confirm /files/git is mounted and writable by the n8n container."
+      },
+      "id": "fc7999bd-132f-45f9-ab2e-43f1b2b280ef",
+      "name": "Sticky Note - Required Deployment Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1220,
+        -560
+      ]
+    }
+  ],
+  "connections": {
+    "GitHub Deploy Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Staging Import",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Staging Import": {
+      "main": [
+        [
+          {
+            "node": "Import To Staging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import To Staging": {
+      "main": [
+        [
+          {
+            "node": "Telegram Approval Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Approval Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Production Promotion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Production Promotion": {
+      "main": [
+        [
+          {
+            "node": "Import To Production",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import To Production": {
+      "main": [
+        [
+          {
+            "node": "Telegram Promotion Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Promotion Notice": {
+      "main": [
+        [
+          {
+            "node": "Approval Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
 }

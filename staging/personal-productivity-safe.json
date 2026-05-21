@@ -483,6 +483,22 @@
         "content": "# Telegram Approval / Editing Protocol\n\nThis workflow is designed so the user edits and approves actions in Telegram/chat before execution.\n\n## Email editing commands\n- `/to email1@example.com, email2@example.com`\n- `/cc email@example.com`\n- `/bcc email@example.com`\n- `/subject new subject`\n- `/body new body text`\n- `/no_draft_sender sender@example.com`\n- `/no_draft_domain example.com`\n- `/no_draft_thread THREAD_ID`\n- `/approve`\n- `/reject`\n\n## Calendar editing commands\n- `/title new event title`\n- `/time YYYY-MM-DD HH:mm-HH:mm`\n- `/location location text`\n- `/notes notes text`\n- `/attendees email1@example.com, email2@example.com`\n- `/approve`\n- `/reject`\n\n## Safety\nSend_Email, Book_Meeting, Update_Meeting, and Cancel_Meeting are connected as agent tools in the template, but disabled at node level in this staged safe copy. For production-grade execution, split approval into a separate workflow with Telegram callback buttons and pending-action storage before enabling them."
       },
       "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "color": "#FF6B6B",
+        "width": 560,
+        "height": 500,
+        "content": "# REQUIRED BEFORE PRODUCTION\n\nComplete these items before activating this workflow:\n\n## n8n production checklist\n- Set up error notifications or an error workflow.\n- Configure time saved tracking if you want reporting.\n- Enable MCP access only if this workflow must be exposed to MCP clients.\n\n## Credentials and models\n- Select real Gmail OAuth credentials on Gmail tool nodes.\n- Select real Google Calendar OAuth credentials on Calendar tool nodes.\n- Select/create the Ollama credential on every Ollama Chat Model node.\n- Confirm the Ollama base URL and model are reachable from n8n.\n\n## Safety review\n- Keep Send_Email, Book_Meeting, Update_Meeting, and Cancel_Meeting disabled until the approval flow is fully tested.\n- Review all prompts and permissions before activating production."
+      },
+      "id": "4ab2506b-46b2-4e48-88c3-1e36292914aa",
+      "name": "Sticky Note - Required Production Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -900,
+        -760
+      ]
     }
   ],
   "active": false,
