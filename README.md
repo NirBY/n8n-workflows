@@ -201,6 +201,16 @@ Set `GITHUB_TOKEN` only if n8n must download workflow files from a private repos
 
 If a staging workflow still appears unpublished after the CLI publish step, restart the n8n container. n8n's server CLI publish/unpublish commands update the database directly, and n8n documents that running instances may need a restart before those changes take effect.
 
+For deployment debugging, keep successful execution data enabled:
+
+```text
+EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+EXECUTIONS_DATA_SAVE_ON_ERROR=all
+EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
+```
+
+After the deployment flow is stable, you can reduce database writes by changing `EXECUTIONS_DATA_SAVE_ON_SUCCESS` back to `none`.
+
 ### GitHub Actions Secrets
 
 Configure these in GitHub:
