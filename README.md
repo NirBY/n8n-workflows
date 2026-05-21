@@ -9,11 +9,13 @@ n8n-workflows/
 ├── production/
 │   └── personal-productivity-safe.json
 ├── staging/
+│   ├── github-staging-approval-deploy.json
 │   └── personal-productivity-safe.json
 ├── prompts/
 │   ├── supervisor.md
 │   ├── inbox-agent.md
 │   └── calendar-agent.md
+├── .env.example
 └── README.md
 ```
 
@@ -88,3 +90,48 @@ promote to production
 ```
 
 This allows faster updates while preserving a human approval gate.
+
+## First Deployment Workflow
+
+`staging/github-staging-approval-deploy.json` implements:
+
+```text
+GitHub webhook
+↓
+download workflow JSON
+↓
+import to staging
+↓
+Telegram approval link
+↓
+promote/import to production
+```
+
+The workflow is inactive by default. Import and test it manually before activation.
+
+Required environment variables:
+
+```text
+PUBLIC_N8N_BASE_URL=https://your-n8n-host
+DEPLOY_WEBHOOK_SECRET=random-shared-secret-for-github-webhook
+DEPLOY_APPROVAL_TOKEN=random-token-for-telegram-approval-link
+TELEGRAM_BOT_TOKEN=telegram-bot-token
+TELEGRAM_APPROVAL_CHAT_ID=telegram-chat-id
+```
+
+Optional environment variables:
+
+```text
+DEPLOY_REPO=NirBY/n8n-workflows
+DEPLOY_BRANCH=refs/heads/main
+DEPLOY_WORKFLOW_PATH=staging/personal-productivity-safe.json
+GITHUB_TOKEN=
+```
+
+Notes:
+
+- The GitHub webhook should send `X-N8N-Deploy-Secret` with the same value as `DEPLOY_WEBHOOK_SECRET`.
+- The default deployed file is `staging/personal-productivity-safe.json`.
+- A webhook payload can override it with `workflow_path`, but the workflow only accepts paths under `staging/`.
+- Staging and production imports force `active=false`; activate production manually after review.
+- Production promotion copies the staged file to `/files/git/production/<workflow>.json` and imports that copy.
