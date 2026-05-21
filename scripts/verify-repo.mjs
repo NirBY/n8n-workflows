@@ -125,10 +125,15 @@ const productionPromotionCode = controllerWorkflow?.nodes
   ?.parameters
   ?.jsCode ?? '';
 
-if (!productionPromotionCode.includes("update('production:'+p)") || !productionPromotionCode.includes('j.id=productionId')) {
-  fail('deploy controller must rewrite production workflow ids before import');
+if (
+  !productionPromotionCode.includes('(n8n export:workflow --all') ||
+  !productionPromotionCode.includes('crypto.randomUUID()') ||
+  !productionPromotionCode.includes('w.isArchived!==true') ||
+  !productionPromotionCode.includes('w.archived!==true')
+) {
+  fail('deploy controller must reuse non-archived production workflow ids and create fresh ids otherwise');
 } else {
-  pass('deploy controller rewrites production workflow ids');
+  pass('deploy controller handles production workflow ids safely');
 }
 
 for (const required of [
