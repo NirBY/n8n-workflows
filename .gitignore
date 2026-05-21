@@ -4,6 +4,29 @@
 !.env.example
 credentials*
 *.credentials.json
+*credential*
+*credentials*
+*secret*
+*secrets*
+*token*
+*tokens*
+*oauth*
+*OAuth*
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cert
+auth.json
+oauth.json
+secrets.json
+tokens.json
+
+# Local n8n exports that may include credentials or runtime metadata
+credentials.json
+n8n-credentials*.json
+n8n_credentials*.json
 
 # n8n runtime data should not live in this repo
 .n8n/

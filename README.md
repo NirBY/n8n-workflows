@@ -69,6 +69,8 @@ If `/volume2/docker/n8n/files` is mounted into the container as `/files`, keep t
 
 ## Safety Notes
 
+- Do not store `.env`, credentials, tokens, OAuth secrets, private keys, or exported n8n credential files in Git.
+- Keep real secret values only in n8n credentials, Docker secrets, environment variables, or another private secret store.
 - Keep staging and production workflow JSON separate.
 - Import to staging first.
 - Review behavior before activating production.
