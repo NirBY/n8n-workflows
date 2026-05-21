@@ -1,0 +1,144 @@
+version: "2.4"
+
+services:
+  n8n-postgres:
+    image: postgres:16-alpine
+    container_name: n8n-postgres
+    restart: unless-stopped
+
+    environment:
+      - TZ=${TZ}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+
+    volumes:
+      - ${N8N_POSTGRES_DATA_DIR}:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+    mem_limit: 1g
+    memswap_limit: 1g
+    cpu_shares: 512
+
+    security_opt:
+      - no-new-privileges:true
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+
+    depends_on:
+      n8n-postgres:
+        condition: service_healthy
+
+    ports:
+      - "${N8N_PORT}:${N8N_PORT}"
+
+    environment:
+      - TZ=${TZ}
+      - GENERIC_TIMEZONE=${TZ}
+
+      # Public/external URL
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=${N8N_PORT}
+      - N8N_PROTOCOL=${N8N_PROTOCOL}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL}
+      - PUBLIC_N8N_BASE_URL=${PUBLIC_N8N_BASE_URL}
+
+      # Security
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE}
+      - DEPLOY_WEBHOOK_SECRET=${DEPLOY_WEBHOOK_SECRET}
+      - DEPLOY_APPROVAL_TOKEN=${DEPLOY_APPROVAL_TOKEN}
+
+      # Enable Execute Command for the deployment workflow.
+      # Only use this on a trusted self-hosted n8n instance.
+      - NODES_EXCLUDE=${NODES_EXCLUDE}
+
+      # Telegram
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_APPROVAL_CHAT_ID=${TELEGRAM_APPROVAL_CHAT_ID}
+
+      # Repo
+      - DEPLOY_REPO=${DEPLOY_REPO}
+      - DEPLOY_BRANCH=${DEPLOY_BRANCH}
+      - DEPLOY_WORKFLOW_PATH=${DEPLOY_WORKFLOW_PATH}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+
+      # PostgreSQL
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=n8n-postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+
+      # Execution cleanup
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=none
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=30
+      - EXECUTIONS_DATA_PRUNE_MAX_COUNT=5000
+
+      # UI / telemetry
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_PERSONALIZATION_ENABLED=false
+      - N8N_HIRING_BANNER_ENABLED=false
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=true
+      - N8N_TEMPLATES_ENABLED=true
+
+      # Logging
+      - N8N_LOG_LEVEL=info
+
+      # Optional references for workflows
+      - MAC_MINI_OPENWEBUI_URL=${MAC_MINI_OPENWEBUI_URL}
+      - MAC_MINI_OLLAMA_URL=${MAC_MINI_OLLAMA_URL}
+
+    volumes:
+      - ${N8N_DATA_DIR}:/home/node/.n8n
+      - ${N8N_FILES_DIR}:/files
+      - ${N8N_LOGS_DIR}:/logs
+      - ${AI_PROMPTS_DIR}:/prompts
+      - ${AI_TEMPLATES_DIR}:/templates
+      - ${AI_KNOWLEDGE_DIR}:/knowledge
+      - ${AI_GIT_DIR}:/git
+      - ${AI_APPROVALS_DIR}:/approvals
+      - ${AI_LOGS_DIR}:/customlogs
+
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+    mem_limit: 2g
+    memswap_limit: 2g
+    cpu_shares: 1024
+
+    security_opt:
+      - no-new-privileges:true
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:${N8N_PORT}/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
