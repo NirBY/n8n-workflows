@@ -280,4 +280,5 @@ Notes:
 - On manual runs, use `workflow_path=all` to deploy all deployable staging workflows.
 - A webhook payload can override the n8n default with `workflow_path`, but the workflow only accepts paths under `staging/`.
 - Staging and production imports force `active=false`; activate production manually after review.
+- Production promotion rewrites the workflow id to a deterministic production-only id before import, so production does not overwrite the staging candidate.
 - Production promotion copies the staged file to `/files/git/production/<workflow>.json` and imports that copy.

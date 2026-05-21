@@ -119,6 +119,18 @@ if (controller.includes('curl -fsSL')) {
   pass('deploy controller does not depend on curl');
 }
 
+const controllerWorkflow = readJson('controller/github-staging-approval-deploy.json');
+const productionPromotionCode = controllerWorkflow?.nodes
+  ?.find((node) => node.name === 'Prepare Production Promotion')
+  ?.parameters
+  ?.jsCode ?? '';
+
+if (!productionPromotionCode.includes("update('production:'+p)") || !productionPromotionCode.includes('j.id=productionId')) {
+  fail('deploy controller must rewrite production workflow ids before import');
+} else {
+  pass('deploy controller rewrites production workflow ids');
+}
+
 for (const required of [
   'DEPLOY_PUBLISH_STAGING',
   'N8N_BLOCK_ENV_ACCESS_IN_NODE',
