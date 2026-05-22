@@ -1,0 +1,121 @@
+{
+  "name": "Global Error Router - Telegram DLQ Template",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "fdb0b7e8-842d-4a35-9a10-e8c6c8ccdc68",
+      "name": "Global Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json || {};\nconst workflow = item.workflow || item.workflowData || {};\nconst execution = item.execution || item.executionData || {};\nconst error = item.error || item.lastNodeExecuted || {};\nconst baseUrl = String($env.PUBLIC_N8N_BASE_URL || $env.N8N_EDITOR_BASE_URL || '').replace(/\\/$/, '');\nconst workflowId = workflow.id || execution.workflowId || item.workflowId || 'unknown';\nconst workflowName = workflow.name || item.workflowName || 'Unknown workflow';\nconst executionId = execution.id || item.executionId || 'unknown';\nconst nodeName = error.node?.name || error.nodeName || item.lastNodeExecuted || 'unknown node';\nconst message = error.message || item.message || item.errorMessage || 'Unknown error';\nconst stack = error.stack || item.stack || '';\nconst responseBodyRaw = error.response?.body ?? error.cause?.response?.body ?? item.response?.body ?? item.body?.responseBody ?? item.responseBody ?? '';\nconst responseBody = typeof responseBodyRaw === 'string' ? responseBodyRaw : (responseBodyRaw ? JSON.stringify(responseBodyRaw) : '');\nconst responseBodyExcerpt = responseBody.length > 1200 ? `${responseBody.slice(0, 1200)}...` : responseBody;\nconst mode = execution.mode || item.mode || 'unknown';\nconst startedAt = execution.startedAt || item.startedAt || new Date().toISOString();\nconst executionUrl = baseUrl && workflowId !== 'unknown' && executionId !== 'unknown'\n  ? `${baseUrl}/workflow/${workflowId}/executions/${executionId}`\n  : '';\nconst dlqPath = $env.N8N_ERROR_DLQ_PATH || '/files/dlq/n8n-errors.jsonl';\n\nconst record = {\n  timestamp: new Date().toISOString(),\n  workflowId,\n  workflowName,\n  executionId,\n  nodeName,\n  mode,\n  startedAt,\n  message,\n  responseBody: responseBodyExcerpt,\n  executionUrl,\n  stack\n};\n\nconst text = [\n  'n8n workflow failure',\n  `Workflow: ${workflowName}`,\n  `Node: ${nodeName}`,\n  `Execution: ${executionId}`,\n  `Mode: ${mode}`,\n  `Started: ${startedAt}`,\n  `Error: ${message}`,\n  responseBodyExcerpt ? `Response body: ${responseBodyExcerpt}` : '',\n  executionUrl ? `Open: ${executionUrl}` : ''\n].filter(Boolean).join('\\n');\n\nconst binaryData = await this.helpers.prepareBinaryData(Buffer.from(JSON.stringify(record) + '\\n'), 'error.jsonl', 'text/plain');\n\nreturn [{\n  json: {\n    ...record,\n    dlqPath,\n    telegramText: text,\n    chatId: $env.TELEGRAM_ERROR_CHAT_ID || $env.TELEGRAM_APPROVAL_CHAT_ID\n  },\n  binary: {\n    data: binaryData\n  }\n}];"
+      },
+      "id": "9f33a984-ec2c-4fd4-98e5-b8556d49ee23",
+      "name": "Format Error Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -360,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $json.dlqPath }}",
+        "dataPropertyName": "data",
+        "options": {
+          "append": true
+        }
+      },
+      "id": "2d24269e-bf41-4770-ae4a-c0e81c1c1fcc",
+      "name": "Write DLQ File",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage'}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.chatId, text: $json.telegramText, disable_web_page_preview: true }) }}",
+        "options": {}
+      },
+      "id": "f1c7c05e-3f33-4070-87c4-62717f50b4e7",
+      "name": "Send Telegram Error Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        80,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "color": "#FF6B6B",
+        "width": 620,
+        "height": 400,
+        "content": "# Global Error Router\\n\\nImport and activate this workflow, then set each production workflow's Error Workflow setting to this workflow.\\n\\nIt writes JSONL records to N8N_ERROR_DLQ_PATH, defaulting to /files/dlq/n8n-errors.jsonl, and sends a Telegram alert with an execution link.\\n\\nRequired env vars:\\n- TELEGRAM_BOT_TOKEN\\n- TELEGRAM_ERROR_CHAT_ID or TELEGRAM_APPROVAL_CHAT_ID\\n- PUBLIC_N8N_BASE_URL or N8N_EDITOR_BASE_URL"
+      },
+      "id": "be77a620-e3fc-485b-99b3-bb248d3dd56d",
+      "name": "Sticky Note - Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -680,
+        -440
+      ]
+    }
+  ],
+  "connections": {
+    "Global Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Alert": {
+      "main": [
+        [
+          {
+            "node": "Write DLQ File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write DLQ File": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
