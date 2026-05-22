@@ -12,7 +12,7 @@
       "name": "When chat message received",
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "position": [
-        -900,
+        -1240,
         0
       ],
       "webhookId": "915bc421-1a4d-462a-9d1b-00fc63bc8815",
@@ -22,11 +22,24 @@
       "typeVersion": 1.4
     },
     {
+      "id": "8ad9b3bf-8f3d-49fd-b0f1-9f1e1c6f8f01",
+      "name": "Load Prompts",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -520,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst candidateDirs = [\n  $env.PROMPTS_DIR,\n  '/files/git/prompts',\n  '/git/n8n-workflows/prompts',\n  '/prompts'\n].filter(Boolean);\n\nfunction readPrompt(fileName) {\n  const tried = [];\n  for (const dir of candidateDirs) {\n    const filePath = path.join(dir, fileName);\n    tried.push(filePath);\n    if (fs.existsSync(filePath)) {\n      return fs.readFileSync(filePath, 'utf8').trim();\n    }\n  }\n  throw new Error(`Prompt file ${fileName} was not found. Tried: ${tried.join(', ')}`);\n}\n\nreturn $input.all().map((item) => ({\n  json: {\n    ...item.json,\n    prompts: {\n      supervisor: readPrompt('supervisor.md'),\n      inbox: readPrompt('inbox-agent.md'),\n      calendar: readPrompt('calendar-agent.md')\n    }\n  }\n}));"
+      },
+      "typeVersion": 2
+    },
+    {
       "id": "375580f3-89cb-47ff-9c61-75a744b2c6e9",
       "name": "Ollama Chat Model - Supervisor",
       "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
       "position": [
-        -600,
+        -380,
         220
       ],
       "parameters": {
@@ -214,7 +227,7 @@
       "name": "Simple Memory",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "position": [
-        -420,
+        -200,
         220
       ],
       "parameters": {
@@ -233,7 +246,7 @@
         0
       ],
       "parameters": {
-        "text": "=You are the user's Inbox Specialist Agent. You have access to Gmail tools.\n\nLANGUAGE:\n- If the user writes Hebrew, summarize and respond in Hebrew.\n- Email drafts should match the user's requested language, or match the original email language if not specified.\n\nALLOWED WITHOUT APPROVAL:\n- Read unread emails.\n- Summarize emails.\n- Prepare Gmail drafts.\n- Edit Gmail drafts/content when the user provides edits.\n\nREQUIRES EXPLICIT APPROVAL:\n- Sending emails.\n- Adding recipients and sending.\n- Any destructive or external irreversible email action.\n\nTELEGRAM/CHAT EDITING PROTOCOL:\nWhen preparing a draft, return the following editable block:\nORIGINAL EMAIL:\n- From:\n- Subject:\n- Summary:\n- Needs action: yes/no\n\nPROPOSED DRAFT:\n- To:\n- CC:\n- BCC:\n- Subject:\n- Body:\n\nEDIT OPTIONS:\nTell the user they can reply with:\n/to ...\n/cc ...\n/bcc ...\n/subject ...\n/body ...\n/no_draft_sender ...\n/no_draft_domain ...\n/no_draft_thread ...\n/approve\n/reject\n\nRULES:\n1. Use Read_Emails for email summaries and context.\n2. Use Draft_Email to prepare or update responses.\n3. Always return the exact draft text to the Supervisor.\n4. Use Send_Email ONLY if the Supervisor explicitly says the user approved sending with APPROVE SEND EMAIL or /approve.\n5. If the user asks not to suggest drafts for this sender/thread/domain, do not draft; return the suppression rule that should be saved.\n\n---\nINSTRUCTIONS FROM SUPERVISOR:\n{{ $fromAI('task', 'The specific email context, recipient, approval state, and edit commands to execute', 'string') }}",
+        "text": "={{ $node[\"Load Prompts\"].json.prompts.inbox + \"\\n\\n---\\nINSTRUCTIONS FROM SUPERVISOR:\\n\" + $fromAI(\"task\", \"The specific email context, recipient, approval state, and edit commands to execute\", \"string\") }}",
         "options": {},
         "toolDescription": "Handles safe email operations: reading, summarizing, and drafting. Sending must go through explicit approval flow."
       },
@@ -248,7 +261,7 @@
         0
       ],
       "parameters": {
-        "text": "=You are the user's Calendar Specialist Agent. You have access to Google Calendar tools.\n\nLANGUAGE:\n- If the user writes Hebrew, answer in Hebrew.\n- Timezone is always Asia/Jerusalem unless the user states another timezone.\n\nALLOWED WITHOUT APPROVAL:\n- Check availability.\n- List events.\n- Summarize schedule.\n\nREQUIRES EXPLICIT APPROVAL:\n- Book meeting.\n- Edit/update meeting.\n- Cancel/delete meeting.\n\nTELEGRAM/CHAT EDITING PROTOCOL:\nWhen proposing a calendar action, return the following editable block:\nCALENDAR ACTION PROPOSAL:\n- Action: book/update/cancel\n- Event ID if existing:\n- Title:\n- Start:\n- End:\n- Location:\n- Description/Notes:\n- Attendees:\n- Conflicts:\n\nEDIT OPTIONS:\nTell the user they can reply with:\n/title ...\n/time YYYY-MM-DD HH:mm-HH:mm\n/location ...\n/notes ...\n/attendees ...\n/approve\n/reject\n\nRULES:\n1. Always use Check_Calendar before booking, editing, or canceling.\n2. For booking, verify the slot is free and return proposed details first.\n3. For editing, find and confirm the exact event ID first, then return the proposed updated details.\n4. For canceling, find and confirm the exact event ID first.\n5. Use Book_Meeting, Update_Meeting, or Cancel_Meeting ONLY if the Supervisor explicitly says the user approved the specific action.\n\n---\nINSTRUCTIONS FROM SUPERVISOR:\n{{ $fromAI('task', 'The specific date, time, event ID, approval state, and edit commands to execute', 'string') }}",
+        "text": "={{ $node[\"Load Prompts\"].json.prompts.calendar + \"\\n\\n---\\nINSTRUCTIONS FROM SUPERVISOR:\\n\" + $fromAI(\"task\", \"The specific date, time, event ID, approval state, and edit commands to execute\", \"string\") }}",
         "options": {},
         "toolDescription": "Handles safe calendar operations: checking availability and preparing booking/cancel approval requests."
       },
@@ -305,13 +318,13 @@
       "name": "SUPERVISOR",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "position": [
-        -560,
+        -340,
         0
       ],
       "parameters": {
         "text": "={{ $json.chatInput }}",
         "options": {
-          "systemMessage": "You are the user's Executive Supervisor AI.\n\nYou receive the user's requests from n8n Chat or Telegram and delegate tasks to specialist agents.\n\nLANGUAGE RULES:\n- If the user writes in Hebrew, answer in Hebrew.\n- If the user writes in English, answer in English.\n- Keep internal tool instructions precise and structured.\n- All dates/times are Asia/Jerusalem unless the user says otherwise.\n\nEMAIL/CALENDAR SAFETY RULES:\n- You may read emails, summarize emails, check calendar, and create/update Gmail drafts.\n- Sending email, booking calendar events, editing calendar events, canceling calendar events, deleting/archiving emails, or marking emails as read requires explicit approval.\n- Approval must come from the user in Telegram or n8n Chat with a clear command such as:\n  APPROVE SEND EMAIL\n  APPROVE BOOK MEETING\n  APPROVE UPDATE MEETING\n  APPROVE CANCEL MEETING\n- If approval is missing, return a clear approval request instead of executing the action.\n\nTELEGRAM EDITING PROTOCOL:\nWhen an email draft or calendar action is proposed, show the user the full editable fields and ask them to reply with edits in Telegram/chat.\nSupported edit commands:\n- /to email1@example.com, email2@example.com\n- /cc email@example.com\n- /bcc email@example.com\n- /subject new subject\n- /body new body text\n- /time YYYY-MM-DD HH:mm-HH:mm\n- /title new event title\n- /location location text\n- /notes notes text\n- /no_draft_sender sender@example.com\n- /no_draft_domain example.com\n- /no_draft_thread THREAD_ID\n- /approve\n- /reject\n\nEMAIL DELEGATION:\n- Email tasks go to Inbox_Agent.\n- Inbox_Agent must show original email summary, suggested draft, To, CC, BCC, Subject, Body.\n- If the user edits fields, pass the updated fields to Inbox_Agent.\n- If the user asks not to suggest drafts for a sender/thread/domain, confirm the suppression rule. If a suppression storage tool is not available, clearly tell the user to add it to the suppression list workflow.\n\nCALENDAR DELEGATION:\n- Calendar tasks go to Calendar_Agent.\n- Calendar_Agent must check availability before proposing booking/update/cancel.\n- Calendar_Agent must show exact event details before any modification.\n- If the user edits title/time/location/notes/attendees, pass updated fields to Calendar_Agent.\n\nNever invent email/calendar details. Use tools for real data. Always present final result clearly."
+          "systemMessage": "={{ $json.prompts.supervisor }}"
         },
         "promptType": "define"
       },
@@ -393,7 +406,7 @@
         "color": "#FF6B6B",
         "width": 560,
         "height": 340,
-        "content": "# APPROVAL-GATED ACTION TOOLS ENABLED\n\nThe following tools are enabled:\n- Send_Email\n- Book_Meeting\n- Update_Meeting\n- Cancel_Meeting\n\nThey must only run after the user gives explicit approval:\n- APPROVE SEND EMAIL or /approve\n- APPROVE BOOK MEETING or /approve\n- APPROVE UPDATE MEETING or /approve\n- APPROVE CANCEL MEETING or /approve\n\nDo not activate production until this is tested in staging."
+        "content": "# ACTION TOOLS DISCONNECTED\\n\\nThe following write/delete tools remain on the canvas but are not connected as AI tools:\\n- Send_Email\\n- Book_Meeting\\n- Update_Meeting\\n- Cancel_Meeting\\n\\nThis prevents prompt injection from directly reaching Gmail or Calendar write credentials. Reconnect only through a native approval workflow that executes the final action after a human clicks an approval button."
       },
       "typeVersion": 1
     },
@@ -494,6 +507,131 @@
       "position": [
         -1120,
         -1040
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "personal-productivity/telegram",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "a0c86d10-70e8-4110-a51a-0c9879b1c510",
+      "name": "Telegram Bot Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1240,
+        -300
+      ],
+      "webhookId": "personal-productivity-telegram"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "personal-productivity/greenapi",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "f6bd05f5-d066-4ab5-84d1-e7bf2f3185de",
+      "name": "GREEN-API Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1240,
+        -120
+      ],
+      "webhookId": "personal-productivity-greenapi"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "personal-productivity/whatsapp",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "6371914d-c09d-42f1-8d4b-d5a03fe96d8f",
+      "name": "WhatsApp Cloud Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1240,
+        180
+      ],
+      "webhookId": "personal-productivity-whatsapp"
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "personal-productivity/whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ca8456b8-f45a-498c-8823-ed59294fbf3e",
+      "name": "WhatsApp Cloud Verify",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1240,
+        440
+      ],
+      "webhookId": "personal-productivity-whatsapp-verify"
+    },
+    {
+      "parameters": {
+        "jsCode": "function firstText(...values) {\n  for (const value of values) {\n    if (typeof value === 'string' && value.trim()) return value.trim();\n  }\n  return '';\n}\n\nfunction header(headers, name) {\n  if (!headers) return '';\n  const target = name.toLowerCase();\n  const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === target);\n  return key ? String(headers[key]) : '';\n}\n\nfunction requireBearer(headers, expected, channel) {\n  if (!expected) return;\n  const auth = header(headers, 'authorization');\n  if (auth !== 'Bearer ' + expected) {\n    throw new Error(channel + ' webhook authorization failed');\n  }\n}\n\nfunction requireTelegramSecret(headers) {\n  if (!$env.TELEGRAM_WEBHOOK_SECRET_TOKEN) return;\n  if (header(headers, 'x-telegram-bot-api-secret-token') !== $env.TELEGRAM_WEBHOOK_SECRET_TOKEN) {\n    throw new Error('Telegram webhook secret token mismatch');\n  }\n}\n\nfunction senderName(user) {\n  return firstText(\n    user?.username && '@' + user.username,\n    [user?.first_name, user?.last_name].filter(Boolean).join(' '),\n    user?.pushName,\n    user?.senderName,\n    user?.displayName\n  );\n}\n\nconst results = [];\n\nfor (const input of $input.all()) {\n  const item = input.json || {};\n  const headers = item.headers || {};\n  const query = item.query || {};\n  const payload = item.body && (item.headers || item.query) ? item.body : item;\n\n  if (firstText(payload.chatInput, item.chatInput)) {\n    results.push({\n      json: {\n        ...payload,\n        chatInput: firstText(payload.chatInput, item.chatInput),\n        sessionId: firstText(payload.sessionId, item.sessionId, 'n8n-chat'),\n        sourceChannel: firstText(payload.sourceChannel, item.sourceChannel, 'n8n-chat')\n      }\n    });\n    continue;\n  }\n\n  const telegramMessage = payload.message || payload.edited_message || payload.channel_post || payload.callback_query?.message;\n  if (telegramMessage || payload.callback_query) {\n    requireTelegramSecret(headers);\n    const text = firstText(\n      telegramMessage?.text,\n      telegramMessage?.caption,\n      payload.callback_query?.data\n    );\n    if (!text) continue;\n    const chatId = telegramMessage?.chat?.id || payload.callback_query?.message?.chat?.id || payload.callback_query?.from?.id;\n    const from = telegramMessage?.from || payload.callback_query?.from || {};\n    results.push({\n      json: {\n        chatInput: text,\n        sessionId: 'telegram:' + (chatId || from.id || payload.update_id || 'unknown'),\n        sourceChannel: 'telegram',\n        sourceMessageId: telegramMessage?.message_id || payload.callback_query?.id || '',\n        sourceChatId: chatId || '',\n        sourceSenderId: from.id || '',\n        sourceSenderName: senderName(from),\n        rawInput: payload\n      }\n    });\n    continue;\n  }\n\n  if (payload.typeWebhook || payload.senderData || payload.messageData) {\n    requireBearer(headers, $env.GREENAPI_WEBHOOK_TOKEN, 'GREEN-API');\n    if (payload.typeWebhook && payload.typeWebhook !== 'incomingMessageReceived') continue;\n    const messageData = payload.messageData || {};\n    const textData = messageData.textMessageData || {};\n    const extendedTextData = messageData.extendedTextMessageData || {};\n    const fileData = messageData.fileMessageData || {};\n    const text = firstText(\n      textData.textMessage,\n      extendedTextData.text,\n      fileData.caption,\n      messageData?.quotedMessage?.textMessage,\n      messageData?.buttonMessageData?.buttonText\n    );\n    if (!text) continue;\n    const chatId = payload.senderData?.chatId || payload.senderData?.sender || payload.chatId || 'unknown';\n    results.push({\n      json: {\n        chatInput: text,\n        sessionId: 'greenapi:' + chatId,\n        sourceChannel: 'greenapi',\n        sourceMessageId: payload.idMessage || '',\n        sourceChatId: chatId,\n        sourceSenderId: payload.senderData?.sender || '',\n        sourceSenderName: firstText(payload.senderData?.senderName, payload.senderData?.chatName),\n        rawInput: payload\n      }\n    });\n    continue;\n  }\n\n  const whatsappEvents = [];\n  if (payload.object === 'whatsapp_business_account' && Array.isArray(payload.entry)) {\n    for (const entry of payload.entry) {\n      for (const change of entry.changes || []) {\n        const value = change.value || {};\n        for (const message of value.messages || []) {\n          whatsappEvents.push({ value, message, field: change.field });\n        }\n      }\n    }\n  } else if (Array.isArray(payload.messages)) {\n    for (const message of payload.messages) {\n      whatsappEvents.push({ value: payload, message, field: payload.field || 'messages' });\n    }\n  }\n\n  if (whatsappEvents.length) {\n    for (const event of whatsappEvents) {\n      const message = event.message;\n      const text = firstText(\n        message.text?.body,\n        message.button?.text,\n        message.interactive?.button_reply?.title,\n        message.interactive?.list_reply?.title\n      );\n      if (!text) continue;\n      const contact = (event.value.contacts || []).find((candidate) => candidate.wa_id === message.from) || {};\n      results.push({\n        json: {\n          chatInput: text,\n          sessionId: 'whatsapp:' + (message.from || 'unknown'),\n          sourceChannel: 'whatsapp-cloud',\n          sourceMessageId: message.id || '',\n          sourceChatId: message.from || '',\n          sourceSenderId: message.from || '',\n          sourceSenderName: firstText(contact.profile?.name, message.from),\n          rawInput: payload\n        }\n      });\n    }\n    continue;\n  }\n\n  const genericText = firstText(payload.text, payload.message, payload.prompt, query.text);\n  if (genericText) {\n    results.push({\n      json: {\n        chatInput: genericText,\n        sessionId: firstText(payload.sessionId, query.sessionId, 'webhook:generic'),\n        sourceChannel: firstText(payload.sourceChannel, query.sourceChannel, 'webhook'),\n        rawInput: payload\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "49ab696b-87d4-4872-855b-7c76376fe855",
+      "name": "Normalize Incoming Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -820,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const query = $input.first().json.query || {};\nif ($env.WHATSAPP_VERIFY_TOKEN && query['hub.verify_token'] !== $env.WHATSAPP_VERIFY_TOKEN) {\n  throw new Error('WhatsApp verify token mismatch');\n}\nreturn [{\n  json: {\n    responseText: query['hub.challenge'] || 'ok'\n  }\n}];"
+      },
+      "id": "f84dc09b-9e52-46ad-92f2-fb671cb75f13",
+      "name": "Verify WhatsApp Challenge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -940,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{$json.responseText}}",
+        "options": {}
+      },
+      "id": "b363b4c7-41ab-4670-a626-c87db3ec6770",
+      "name": "WhatsApp Challenge Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -680,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "color": "#D6EAF8",
+        "width": 780,
+        "height": 520,
+        "content": "# Messaging Entry Points\n\nThis production candidate accepts commands from four sources and normalizes them before the Supervisor:\n\n- n8n chat trigger\n- Telegram webhook: /webhook/personal-productivity/telegram\n- GREEN-API webhook: /webhook/personal-productivity/greenapi\n- WhatsApp Cloud webhook: /webhook/personal-productivity/whatsapp\n\nRecommended security:\n- Set TELEGRAM_WEBHOOK_SECRET_TOKEN and pass it to Telegram setWebhook as secret_token.\n- Set GREENAPI_WEBHOOK_TOKEN and pass it to GREEN-API as webhookUrlToken using Bearer <token>.\n- Set WHATSAPP_VERIFY_TOKEN and use the same token in Meta webhook verification.\n\nThe normalizer ignores GREEN-API non-message status events and WhatsApp status-only events."
+      },
+      "id": "e18cbb5d-488c-45d7-a432-a2e84d5c5937",
+      "name": "Sticky Note - Messaging Entry Points",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1320,
+        -760
       ]
     }
   ],
@@ -608,6 +746,17 @@
       "main": [
         [
           {
+            "node": "Normalize Incoming Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Prompts": {
+      "main": [
+        [
+          {
             "node": "SUPERVISOR",
             "type": "main",
             "index": 0
@@ -615,45 +764,67 @@
         ]
       ]
     },
-    "Send_Email": {
-      "ai_tool": [
+    "Telegram Bot Webhook": {
+      "main": [
         [
           {
-            "node": "Inbox_Agent",
-            "type": "ai_tool",
+            "node": "Normalize Incoming Command",
+            "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Book_Meeting": {
-      "ai_tool": [
+    "GREEN-API Webhook": {
+      "main": [
         [
           {
-            "node": "Calendar_Agent",
-            "type": "ai_tool",
+            "node": "Normalize Incoming Command",
+            "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Cancel_Meeting": {
-      "ai_tool": [
+    "WhatsApp Cloud Webhook": {
+      "main": [
         [
           {
-            "node": "Calendar_Agent",
-            "type": "ai_tool",
+            "node": "Normalize Incoming Command",
+            "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Update_Meeting": {
-      "ai_tool": [
+    "Normalize Incoming Command": {
+      "main": [
         [
           {
-            "node": "Calendar_Agent",
-            "type": "ai_tool",
+            "node": "Load Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Cloud Verify": {
+      "main": [
+        [
+          {
+            "node": "Verify WhatsApp Challenge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify WhatsApp Challenge": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Challenge Response",
+            "type": "main",
             "index": 0
           }
         ]

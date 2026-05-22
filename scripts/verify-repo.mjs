@@ -136,11 +136,23 @@ if (
   pass('deploy controller handles production workflow ids safely');
 }
 
+if (
+  !productionPromotionCode.includes('Refusing unsafe workflow filename') ||
+  !productionPromotionCode.includes('node.credentials=previous.credentials') ||
+  !productionPromotionCode.includes('git -C "$REPO_DIR" commit') ||
+  !productionPromotionCode.includes('git -C "$REPO_DIR" push')
+) {
+  fail('deploy controller must validate approval filenames, preserve production credentials, and git-sync promoted production workflows');
+} else {
+  pass('deploy controller validates approval input, preserves credentials, and git-syncs production promotions');
+}
+
 for (const required of [
   'DEPLOY_PUBLISH_STAGING',
   'N8N_BLOCK_ENV_ACCESS_IN_NODE',
   'N8N_PROXY_HOPS',
   'NODES_EXCLUDE',
+  'DEPLOY_GIT_REPO_DIR',
 ]) {
   const envExample = readText('.env.example');
   const compose = readText('docker/docker-compose.yml');

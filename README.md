@@ -184,16 +184,45 @@ TELEGRAM_APPROVAL_CHAT_ID=telegram-chat-id-that-receives-approval-messages
 NODES_EXCLUDE=[]
 ```
 
+Required by the personal productivity messaging entry points:
+
+```text
+TELEGRAM_WEBHOOK_SECRET_TOKEN=random-secret-token-for-telegram-webhook
+GREENAPI_WEBHOOK_TOKEN=random-token-for-green-api-webhook
+WHATSAPP_VERIFY_TOKEN=random-token-for-meta-whatsapp-verification
+```
+
 Optional:
 
 ```text
 DEPLOY_REPO=OWNER/REPO
 DEPLOY_BRANCH=refs/heads/main
 DEPLOY_WORKFLOW_PATH=staging/personal-productivity-safe.json
+DEPLOY_GIT_REPO_DIR=/files/git
 GITHUB_TOKEN=
 ```
 
 Set `GITHUB_TOKEN` only if n8n must download workflow files from a private repository. For a public repository, leave it empty.
+
+### Personal Productivity Messaging Inputs
+
+The production candidate workflow accepts commands from:
+
+```text
+Telegram webhook: https://your-n8n-host/webhook/personal-productivity/telegram
+GREEN-API webhook: https://your-n8n-host/webhook/personal-productivity/greenapi
+WhatsApp Cloud webhook: https://your-n8n-host/webhook/personal-productivity/whatsapp
+```
+
+Telegram and GREEN-API are the quickest path for a personal assistant. Meta WhatsApp Cloud is the official WhatsApp route and is best for a real business number, but it has more setup friction and app/webhook restrictions.
+
+For Telegram, call `setWebhook` with the production Telegram webhook URL and pass the same `TELEGRAM_WEBHOOK_SECRET_TOKEN` as `secret_token`.
+
+For GREEN-API, set the instance `webhookUrl` to the GREEN-API webhook URL, set `webhookUrlToken` to `Bearer <GREENAPI_WEBHOOK_TOKEN>`, and enable `incomingWebhook`.
+
+For Meta WhatsApp Cloud, use the WhatsApp webhook URL as the callback URL, use `WHATSAPP_VERIFY_TOKEN` as the verify token, and subscribe the app to `messages`.
+
+Set `DEPLOY_GIT_REPO_DIR` to the Git checkout path inside the n8n container. Promotion copies the approved production JSON there, commits it, and pushes it after the n8n import succeeds. If unset, the controller tries `/files/git` and `/git/n8n-workflows`.
 
 `NODES_EXCLUDE=[]` is required because the deployment workflow uses n8n's `Execute Command` node to run the local import commands inside the n8n container. Some n8n versions disable this node by default for security. Only enable it on a trusted self-hosted n8n instance.
 
@@ -282,3 +311,4 @@ Notes:
 - Staging and production imports force `active=false`; activate production manually after review.
 - Production promotion rewrites the workflow id to a deterministic production-only id before import, so production does not overwrite the staging candidate.
 - Production promotion copies the staged file to `/files/git/production/<workflow>.json` and imports that copy.
+- Production promotion commits and pushes the production JSON when it can find a writable Git checkout.
