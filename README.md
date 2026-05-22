@@ -102,11 +102,13 @@ If `/volume2/docker/n8n/files` is mounted into the container as `/files`, keep t
 
 - Do not store `.env`, credentials, tokens, OAuth secrets, private keys, or exported n8n credential files in Git.
 - Keep real secret values only in n8n credentials, Docker secrets, environment variables, or another private secret store.
+- `scripts/verify-repo.mjs` includes a credential leak scanner for known token formats and high-entropy values assigned to secret-like names.
 - Keep staging and production workflow JSON separate.
 - Import to staging first.
 - Review behavior before activating production.
 - Require manual approval before any workflow sends email or books meetings.
 - Track prompt changes in `prompts/` so behavior changes are reviewable.
+- The personal productivity workflow partitions memory by agent role: supervisor, inbox, and calendar.
 
 ## GitHub Actions Deployment
 
@@ -181,6 +183,8 @@ DEPLOY_APPROVAL_TOKEN=use-a-long-random-approval-token
 DEPLOY_PUBLISH_STAGING=true
 TELEGRAM_BOT_TOKEN=telegram-bot-token-from-botfather
 TELEGRAM_APPROVAL_CHAT_ID=telegram-chat-id-that-receives-approval-messages
+TELEGRAM_ERROR_CHAT_ID=telegram-chat-id-that-receives-error-alerts
+N8N_ERROR_DLQ_PATH=/files/dlq/n8n-errors.jsonl
 NODES_EXCLUDE=[]
 ```
 
@@ -240,6 +244,21 @@ EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
 
 After the deployment flow is stable, you can reduce database writes by changing `EXECUTIONS_DATA_SAVE_ON_SUCCESS` back to `none`.
 
+## Global Error Router
+
+`controller/global-error-router.json` is an inactive template workflow for production error handling.
+
+Import and activate it in n8n, then set each production workflow's Error Workflow setting to this router. It writes JSONL failure records to `N8N_ERROR_DLQ_PATH` and sends a Telegram alert with workflow, node, execution id, error text, and an execution link.
+
+Required environment variables:
+
+```text
+TELEGRAM_BOT_TOKEN=telegram-bot-token
+TELEGRAM_ERROR_CHAT_ID=telegram-chat-id
+N8N_ERROR_DLQ_PATH=/files/dlq/n8n-errors.jsonl
+PUBLIC_N8N_BASE_URL=https://your-n8n-host
+```
+
 ### GitHub Actions Secrets
 
 Configure these in GitHub:
@@ -274,7 +293,7 @@ download workflow JSON
 ↓
 import to staging
 ↓
-Telegram approval link
+Telegram short backoffice approval link
 ↓
 promote/import to production
 ```
@@ -312,3 +331,4 @@ Notes:
 - Production promotion rewrites the workflow id to a deterministic production-only id before import, so production does not overwrite the staging candidate.
 - Production promotion copies the staged file to `/files/git/production/<workflow>.json` and imports that copy.
 - Production promotion commits and pushes the production JSON when it can find a writable Git checkout.
+- Telegram approval buttons point to `/webhook/deploy-approval?id=<short-id>` only. The full source/target/token details are stored server-side under `/files/approvals` and rendered in the backoffice overview before approval.

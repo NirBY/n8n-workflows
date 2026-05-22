@@ -1,834 +1,977 @@
 {
-  "id": "ZemG6UGO2KVDib8r",
-  "meta": {
-    "instanceId": "template-instance-id",
-    "templateCredsSetupCompleted": false
-  },
-  "name": "Personal productivity - Gmail Calendar Telegram Approval Ollama v2",
-  "tags": [],
-  "nodes": [
-    {
-      "id": "3a5b8268-4355-4a8e-8710-0dff30e21bd8",
-      "name": "When chat message received",
-      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
-      "position": [
-        -1240,
-        0
-      ],
-      "webhookId": "915bc421-1a4d-462a-9d1b-00fc63bc8815",
-      "parameters": {
-        "options": {}
-      },
-      "typeVersion": 1.4
-    },
-    {
-      "id": "8ad9b3bf-8f3d-49fd-b0f1-9f1e1c6f8f01",
-      "name": "Load Prompts",
-      "type": "n8n-nodes-base.code",
-      "position": [
-        -520,
-        0
-      ],
-      "parameters": {
-        "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst candidateDirs = [\n  $env.PROMPTS_DIR,\n  '/files/git/prompts',\n  '/git/n8n-workflows/prompts',\n  '/prompts'\n].filter(Boolean);\n\nfunction readPrompt(fileName) {\n  const tried = [];\n  for (const dir of candidateDirs) {\n    const filePath = path.join(dir, fileName);\n    tried.push(filePath);\n    if (fs.existsSync(filePath)) {\n      return fs.readFileSync(filePath, 'utf8').trim();\n    }\n  }\n  throw new Error(`Prompt file ${fileName} was not found. Tried: ${tried.join(', ')}`);\n}\n\nreturn $input.all().map((item) => ({\n  json: {\n    ...item.json,\n    prompts: {\n      supervisor: readPrompt('supervisor.md'),\n      inbox: readPrompt('inbox-agent.md'),\n      calendar: readPrompt('calendar-agent.md')\n    }\n  }\n}));"
-      },
-      "typeVersion": 2
-    },
-    {
-      "id": "375580f3-89cb-47ff-9c61-75a744b2c6e9",
-      "name": "Ollama Chat Model - Supervisor",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
-      "position": [
-        -380,
-        220
-      ],
-      "parameters": {
-        "model": "qwen2.5:7b-instruct-q4_K_M",
-        "options": {
-          "temperature": 0.2,
-          "numCtx": 4096
-        }
-      },
-      "credentials": {
-        "ollamaApi": {
-          "id": "REPLACE_WITH_YOUR_OLLAMA_CREDENTIAL_ID",
-          "name": "Local Ollama"
-        }
-      },
-      "typeVersion": 1
-    },
-    {
-      "id": "cc51b3fc-3383-4091-8017-a7cc47692002",
-      "name": "Read_Emails",
-      "type": "n8n-nodes-base.gmailTool",
-      "position": [
-        80,
-        220
-      ],
-      "webhookId": "f98c2c89-fe58-4f00-8f33-a4bd9b037823",
-      "parameters": {
-        "filters": {},
-        "operation": "getAll",
-        "descriptionType": "manual",
-        "toolDescription": "Fetches unread emails from the user's Gmail inbox. Use this when asked to summarize emails, check for new messages, or retrieve the context of a specific conversation."
-      },
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "credential-id",
-          "name": "YOUR_GMAIL"
-        }
-      },
-      "typeVersion": 2.2
-    },
-    {
-      "id": "94bbb5d3-dcd4-4402-9ecc-5d449001a0f8",
-      "name": "Draft_Email",
-      "type": "n8n-nodes-base.gmailTool",
-      "position": [
-        220,
-        220
-      ],
-      "webhookId": "44a246e0-461c-43cd-8ec7-bdf28c13349e",
-      "parameters": {
-        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
-        "options": {},
-        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
-        "resource": "draft",
-        "descriptionType": "manual",
-        "toolDescription": "Creates a draft in Gmail but does NOT send it. Use this to prepare an email response for the user to review later in their Gmail app."
-      },
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "credential-id",
-          "name": "YOUR_GMAIL"
-        }
-      },
-      "typeVersion": 2.2
-    },
-    {
-      "id": "c2cdc222-789e-47b2-bf9a-72278b73bdee",
-      "name": "Send_Email",
-      "type": "n8n-nodes-base.gmailTool",
-      "position": [
-        360,
-        220
-      ],
-      "webhookId": "71895a77-2550-48ca-8cfd-a99957f85f79",
-      "parameters": {
-        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
-        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
-        "options": {
-          "senderName": "Personal Assistant",
-          "appendAttribution": false
-        },
-        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
-        "emailType": "text",
-        "descriptionType": "manual",
-        "toolDescription": "Sends an email directly. Use ONLY after the user explicitly approved the exact To/CC/BCC/Subject/Body via Telegram/chat. Before sending, the Inbox_Agent must have shown the full original email summary and final edited draft. Never use from an unapproved request."
-      },
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "credential-id",
-          "name": "YOUR_GMAIL"
-        }
-      },
-      "typeVersion": 2.2
-    },
-    {
-      "id": "e0e6bfd8-2bd3-47a7-ad72-1c892c01c1ee",
-      "name": "Check_Calendar",
-      "type": "n8n-nodes-base.googleCalendarTool",
-      "position": [
-        720,
-        220
-      ],
-      "parameters": {
-        "options": {},
-        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Before', ``, 'string') }}",
-        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', ``, 'string') }}",
-        "calendar": {
-          "__rl": true,
-          "mode": "list",
-          "value": "primary",
-          "cachedResultName": "Primary Calendar"
-        },
-        "operation": "getAll",
-        "descriptionType": "manual",
-        "toolDescription": "Retrieves events from the user's Google Calendar for a specified date or time range. Use this to check availability before booking any meeting, or to find the details/ID of an existing meeting before canceling it."
-      },
-      "credentials": {
-        "googleCalendarOAuth2Api": {
-          "id": "credential-id",
-          "name": "YOUR_GOOGLE_CALENDAR"
-        }
-      },
-      "typeVersion": 1.3
-    },
-    {
-      "id": "9db192a2-a7ba-4778-81a6-9f3a22305e29",
-      "name": "Book_Meeting",
-      "type": "n8n-nodes-base.googleCalendarTool",
-      "position": [
-        880,
-        220
-      ],
-      "parameters": {
-        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
-        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
-        "calendar": {
-          "__rl": true,
-          "mode": "list",
-          "value": "primary",
-          "cachedResultName": "Primary Calendar"
-        },
-        "descriptionType": "manual",
-        "toolDescription": "Creates a Google Calendar event. Use ONLY after Check_Calendar verified availability and the user explicitly approved the exact title/start/end/location/attendees via Telegram/chat.",
-        "additionalFields": {}
-      },
-      "credentials": {
-        "googleCalendarOAuth2Api": {
-          "id": "credential-id",
-          "name": "YOUR_GOOGLE_CALENDAR"
-        }
-      },
-      "typeVersion": 1.3
-    },
-    {
-      "id": "0b9a02fa-039c-4061-bbb1-33f4b4508a01",
-      "name": "Cancel_Meeting",
-      "type": "n8n-nodes-base.googleCalendarTool",
-      "position": [
-        1200,
-        220
-      ],
-      "parameters": {
-        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
-        "options": {},
-        "calendar": {
-          "__rl": true,
-          "mode": "list",
-          "value": "primary",
-          "cachedResultName": "Primary Calendar"
-        },
-        "operation": "delete",
-        "descriptionType": "manual",
-        "toolDescription": "Deletes/cancels a Google Calendar event. Use ONLY after Check_Calendar confirmed the exact event and the user explicitly approved cancellation via Telegram/chat."
-      },
-      "credentials": {
-        "googleCalendarOAuth2Api": {
-          "id": "credential-id",
-          "name": "YOUR_GOOGLE_CALENDAR"
-        }
-      },
-      "typeVersion": 1.3
-    },
-    {
-      "id": "6b36f0d8-edae-4c94-8d19-445d52f40639",
-      "name": "Simple Memory",
-      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
-      "position": [
-        -200,
-        220
-      ],
-      "parameters": {
-        "sessionKey": "={{ $json.sessionId }}",
-        "sessionIdType": "customKey",
-        "contextWindowLength": 16
-      },
-      "typeVersion": 1.3
-    },
-    {
-      "id": "5183cbcb-52f9-4460-afd1-fdadd0233dfd",
-      "name": "Inbox_Agent",
-      "type": "@n8n/n8n-nodes-langchain.agentTool",
-      "position": [
-        -120,
-        0
-      ],
-      "parameters": {
-        "text": "={{ $node[\"Load Prompts\"].json.prompts.inbox + \"\\n\\n---\\nINSTRUCTIONS FROM SUPERVISOR:\\n\" + $fromAI(\"task\", \"The specific email context, recipient, approval state, and edit commands to execute\", \"string\") }}",
-        "options": {},
-        "toolDescription": "Handles safe email operations: reading, summarizing, and drafting. Sending must go through explicit approval flow."
-      },
-      "typeVersion": 3
-    },
-    {
-      "id": "5e9403f8-70ff-40a0-b1dd-213f65969f44",
-      "name": "Calendar_Agent",
-      "type": "@n8n/n8n-nodes-langchain.agentTool",
-      "position": [
-        560,
-        0
-      ],
-      "parameters": {
-        "text": "={{ $node[\"Load Prompts\"].json.prompts.calendar + \"\\n\\n---\\nINSTRUCTIONS FROM SUPERVISOR:\\n\" + $fromAI(\"task\", \"The specific date, time, event ID, approval state, and edit commands to execute\", \"string\") }}",
-        "options": {},
-        "toolDescription": "Handles safe calendar operations: checking availability and preparing booking/cancel approval requests."
-      },
-      "typeVersion": 3
-    },
-    {
-      "id": "045d94af-0ac9-4b96-b418-16d5cd87b911",
-      "name": "Ollama Chat Model - Inbox",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
-      "position": [
-        -220,
-        220
-      ],
-      "parameters": {
-        "model": "qwen2.5:7b-instruct-q4_K_M",
-        "options": {
-          "temperature": 0.2,
-          "numCtx": 4096
-        }
-      },
-      "credentials": {
-        "ollamaApi": {
-          "id": "REPLACE_WITH_YOUR_OLLAMA_CREDENTIAL_ID",
-          "name": "Local Ollama"
-        }
-      },
-      "typeVersion": 1
-    },
-    {
-      "id": "363ad001-5220-4b24-8331-4aa2fa469d65",
-      "name": "Ollama Chat Model - Calendar",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
-      "position": [
-        480,
-        220
-      ],
-      "parameters": {
-        "model": "qwen2.5:7b-instruct-q4_K_M",
-        "options": {
-          "temperature": 0.2,
-          "numCtx": 4096
-        }
-      },
-      "credentials": {
-        "ollamaApi": {
-          "id": "REPLACE_WITH_YOUR_OLLAMA_CREDENTIAL_ID",
-          "name": "Local Ollama"
-        }
-      },
-      "typeVersion": 1
-    },
-    {
-      "id": "557476f2-497a-46a8-ba0c-fd0dc59a14f8",
-      "name": "SUPERVISOR",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "position": [
-        -340,
-        0
-      ],
-      "parameters": {
-        "text": "={{ $json.chatInput }}",
-        "options": {
-          "systemMessage": "={{ $json.prompts.supervisor }}"
-        },
-        "promptType": "define"
-      },
-      "typeVersion": 3.1
-    },
-    {
-      "id": "e9d609c2-7272-4381-87ae-c255f5006ca8",
-      "name": "Sticky Note",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -1120,
-        -520
-      ],
-      "parameters": {
-        "color": "#E0BEBE",
-        "width": 440,
-        "height": 260,
-        "content": "# Chat Entry Point\n\nStarts when a user sends a message through n8n Chat.\n\nExamples:\n- Summarize unread emails\n- Draft a reply\n- Find calendar availability\n- Book a meeting after approval"
-      },
-      "typeVersion": 1
-    },
-    {
-      "id": "9cdd8a37-e5de-4de6-b83e-99a2131de7b5",
-      "name": "Sticky Note1",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -640,
-        -520
-      ],
-      "parameters": {
-        "color": "#CFB5D9",
-        "width": 440,
-        "height": 260,
-        "content": "# Supervisor AI Agent\n\nRoutes user requests to the Inbox or Calendar specialist.\n\nThe Supervisor must ask for explicit approval before instructing tools to send email or change calendar events."
-      },
-      "typeVersion": 1
-    },
-    {
-      "id": "d9404c29-452e-4c8b-9149-287dbedefe50",
-      "name": "Sticky Note2",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -1120,
-        820
-      ],
-      "parameters": {
-        "color": "#FF6B6B",
-        "width": 500,
-        "height": 300,
-        "content": "# REQUIRED: Ollama Configuration\n\nConfigure every Ollama Chat Model node:\n- Ollama Chat Model - Supervisor\n- Ollama Chat Model - Inbox\n- Ollama Chat Model - Calendar\n\nReplace placeholder credential:\nREPLACE_WITH_YOUR_OLLAMA_CREDENTIAL_ID\n\nConfirm base URL and model are reachable from the n8n container."
-      },
-      "typeVersion": 1
-    },
-    {
-      "id": "19972343-faba-4f83-a512-2ca989bb77c9",
-      "name": "Sticky Note3",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -560,
-        820
-      ],
-      "parameters": {
-        "color": "#FF6B6B",
-        "width": 520,
-        "height": 320,
-        "content": "# REQUIRED: Gmail Configuration\n\nConfigure Gmail OAuth credentials on:\n- Read_Emails\n- Draft_Email\n- Send_Email\n\nReplace placeholder credential:\ncredential-id / YOUR_GMAIL\n\nRequired safety test:\n- Read email\n- Create draft\n- Send only after explicit approval command"
-      },
-      "typeVersion": 1
-    },
-    {
-      "id": "4572dd20-170a-429a-b8ab-73747131645c",
-      "name": "Sticky Note4",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        640,
-        820
-      ],
-      "parameters": {
-        "color": "#FF6B6B",
-        "width": 560,
-        "height": 340,
-        "content": "# ACTION TOOLS DISCONNECTED\\n\\nThe following write/delete tools remain on the canvas but are not connected as AI tools:\\n- Send_Email\\n- Book_Meeting\\n- Update_Meeting\\n- Cancel_Meeting\\n\\nThis prevents prompt injection from directly reaching Gmail or Calendar write credentials. Reconnect only through a native approval workflow that executes the final action after a human clicks an approval button."
-      },
-      "typeVersion": 1
-    },
-    {
-      "id": "e288df9a-6ced-46fa-8526-1595b91843a4",
-      "name": "Sticky Note5",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        20,
-        820
-      ],
-      "parameters": {
-        "color": "#FF6B6B",
-        "width": 560,
-        "height": 340,
-        "content": "# REQUIRED: Google Calendar Configuration\n\nConfigure Google Calendar OAuth credentials on:\n- Check_Calendar\n- Book_Meeting\n- Update_Meeting\n- Cancel_Meeting\n\nReplace placeholder credential:\ncredential-id / YOUR_GOOGLE_CALENDAR\n\nRequired safety test:\n- Check availability first\n- Book/update/cancel only after explicit approval command"
-      },
-      "typeVersion": 1
-    },
-    {
-      "id": "fe670176-17b4-494c-a0b2-1a7dc2a485b2",
-      "name": "Sticky Note6",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -160,
-        -520
-      ],
-      "parameters": {
-        "color": "#ECDD93",
-        "width": 500,
-        "height": 260,
-        "content": "# Workflow Overview\n\nSafe personal productivity assistant.\n\nThe graph below contains real action tools. The approval protocol in the prompts is the safety gate, so prompt review and staging tests are required before production activation."
-      },
-      "typeVersion": 1
-    },
-    {
-      "id": "61215e2d-9396-4552-914d-62c1cbecf054",
-      "name": "Update_Meeting",
-      "type": "n8n-nodes-base.googleCalendarTool",
-      "position": [
-        1040,
-        220
-      ],
-      "parameters": {
-        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
-        "calendar": {
-          "__rl": true,
-          "mode": "list",
-          "value": "primary",
-          "cachedResultName": "Primary Calendar"
-        },
-        "operation": "update",
-        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
-        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
-        "descriptionType": "manual",
-        "toolDescription": "Updates an existing Google Calendar event ONLY after explicit approval. You MUST run Check_Calendar first, confirm the exact event ID, show the proposed changes to the user, and use this tool only when the Supervisor says the user approved the update.",
-        "additionalFields": {
-          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Title', ``, 'string') }}",
-          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', ``, 'string') }}",
-          "location": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Location', ``, 'string') }}"
-        }
-      },
-      "credentials": {
-        "googleCalendarOAuth2Api": {
-          "id": "credential-id",
-          "name": "YOUR_GOOGLE_CALENDAR"
-        }
-      },
-      "typeVersion": 1.3
-    },
-    {
-      "id": "b20383e3-1887-4121-8d52-1eef6b846995",
-      "name": "Sticky Note - Telegram Approval Editing",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        380,
-        -520
-      ],
-      "parameters": {
-        "color": "#F3DFA2",
-        "width": 640,
-        "height": 360,
-        "content": "# Approval / Editing Protocol\n\nSupported commands:\n- /to, /cc, /bcc, /subject, /body\n- /title, /time, /location, /notes, /attendees\n- /approve\n- /reject\n\nThe agents must show the exact draft or calendar action before using Send_Email, Book_Meeting, Update_Meeting, or Cancel_Meeting."
-      },
-      "typeVersion": 1
-    },
-    {
-      "parameters": {
-        "color": "#FF6B6B",
-        "width": 620,
-        "height": 460,
-        "content": "# REQUIRED BEFORE PRODUCTION\n\nComplete these items before activating this workflow:\n\n## n8n production checklist\n- Set up error notifications or an error workflow.\n- Configure time saved tracking if you want reporting.\n- Enable MCP access only if this workflow must be exposed to MCP clients.\n\n## Credentials and models\n- Configure all red credential notes on this canvas.\n- Confirm Gmail, Calendar, and Ollama permissions before activation.\n\n## Safety review\n- Dangerous tools are enabled, but prompts require explicit approval first.\n- Test approval phrases and /approve flow in staging before production."
-      },
-      "id": "4ab2506b-46b2-4e48-88c3-1e36292914aa",
-      "name": "Sticky Note - Required Production Setup",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -1120,
-        -1040
-      ]
-    },
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "personal-productivity/telegram",
-        "responseMode": "onReceived",
-        "options": {}
-      },
-      "id": "a0c86d10-70e8-4110-a51a-0c9879b1c510",
-      "name": "Telegram Bot Webhook",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        -1240,
-        -300
-      ],
-      "webhookId": "personal-productivity-telegram"
-    },
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "personal-productivity/greenapi",
-        "responseMode": "onReceived",
-        "options": {}
-      },
-      "id": "f6bd05f5-d066-4ab5-84d1-e7bf2f3185de",
-      "name": "GREEN-API Webhook",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        -1240,
-        -120
-      ],
-      "webhookId": "personal-productivity-greenapi"
-    },
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "personal-productivity/whatsapp",
-        "responseMode": "onReceived",
-        "options": {}
-      },
-      "id": "6371914d-c09d-42f1-8d4b-d5a03fe96d8f",
-      "name": "WhatsApp Cloud Webhook",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        -1240,
-        180
-      ],
-      "webhookId": "personal-productivity-whatsapp"
-    },
-    {
-      "parameters": {
-        "httpMethod": "GET",
-        "path": "personal-productivity/whatsapp",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "id": "ca8456b8-f45a-498c-8823-ed59294fbf3e",
-      "name": "WhatsApp Cloud Verify",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        -1240,
-        440
-      ],
-      "webhookId": "personal-productivity-whatsapp-verify"
-    },
-    {
-      "parameters": {
-        "jsCode": "function firstText(...values) {\n  for (const value of values) {\n    if (typeof value === 'string' && value.trim()) return value.trim();\n  }\n  return '';\n}\n\nfunction header(headers, name) {\n  if (!headers) return '';\n  const target = name.toLowerCase();\n  const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === target);\n  return key ? String(headers[key]) : '';\n}\n\nfunction requireBearer(headers, expected, channel) {\n  if (!expected) return;\n  const auth = header(headers, 'authorization');\n  if (auth !== 'Bearer ' + expected) {\n    throw new Error(channel + ' webhook authorization failed');\n  }\n}\n\nfunction requireTelegramSecret(headers) {\n  if (!$env.TELEGRAM_WEBHOOK_SECRET_TOKEN) return;\n  if (header(headers, 'x-telegram-bot-api-secret-token') !== $env.TELEGRAM_WEBHOOK_SECRET_TOKEN) {\n    throw new Error('Telegram webhook secret token mismatch');\n  }\n}\n\nfunction senderName(user) {\n  return firstText(\n    user?.username && '@' + user.username,\n    [user?.first_name, user?.last_name].filter(Boolean).join(' '),\n    user?.pushName,\n    user?.senderName,\n    user?.displayName\n  );\n}\n\nconst results = [];\n\nfor (const input of $input.all()) {\n  const item = input.json || {};\n  const headers = item.headers || {};\n  const query = item.query || {};\n  const payload = item.body && (item.headers || item.query) ? item.body : item;\n\n  if (firstText(payload.chatInput, item.chatInput)) {\n    results.push({\n      json: {\n        ...payload,\n        chatInput: firstText(payload.chatInput, item.chatInput),\n        sessionId: firstText(payload.sessionId, item.sessionId, 'n8n-chat'),\n        sourceChannel: firstText(payload.sourceChannel, item.sourceChannel, 'n8n-chat')\n      }\n    });\n    continue;\n  }\n\n  const telegramMessage = payload.message || payload.edited_message || payload.channel_post || payload.callback_query?.message;\n  if (telegramMessage || payload.callback_query) {\n    requireTelegramSecret(headers);\n    const text = firstText(\n      telegramMessage?.text,\n      telegramMessage?.caption,\n      payload.callback_query?.data\n    );\n    if (!text) continue;\n    const chatId = telegramMessage?.chat?.id || payload.callback_query?.message?.chat?.id || payload.callback_query?.from?.id;\n    const from = telegramMessage?.from || payload.callback_query?.from || {};\n    results.push({\n      json: {\n        chatInput: text,\n        sessionId: 'telegram:' + (chatId || from.id || payload.update_id || 'unknown'),\n        sourceChannel: 'telegram',\n        sourceMessageId: telegramMessage?.message_id || payload.callback_query?.id || '',\n        sourceChatId: chatId || '',\n        sourceSenderId: from.id || '',\n        sourceSenderName: senderName(from),\n        rawInput: payload\n      }\n    });\n    continue;\n  }\n\n  if (payload.typeWebhook || payload.senderData || payload.messageData) {\n    requireBearer(headers, $env.GREENAPI_WEBHOOK_TOKEN, 'GREEN-API');\n    if (payload.typeWebhook && payload.typeWebhook !== 'incomingMessageReceived') continue;\n    const messageData = payload.messageData || {};\n    const textData = messageData.textMessageData || {};\n    const extendedTextData = messageData.extendedTextMessageData || {};\n    const fileData = messageData.fileMessageData || {};\n    const text = firstText(\n      textData.textMessage,\n      extendedTextData.text,\n      fileData.caption,\n      messageData?.quotedMessage?.textMessage,\n      messageData?.buttonMessageData?.buttonText\n    );\n    if (!text) continue;\n    const chatId = payload.senderData?.chatId || payload.senderData?.sender || payload.chatId || 'unknown';\n    results.push({\n      json: {\n        chatInput: text,\n        sessionId: 'greenapi:' + chatId,\n        sourceChannel: 'greenapi',\n        sourceMessageId: payload.idMessage || '',\n        sourceChatId: chatId,\n        sourceSenderId: payload.senderData?.sender || '',\n        sourceSenderName: firstText(payload.senderData?.senderName, payload.senderData?.chatName),\n        rawInput: payload\n      }\n    });\n    continue;\n  }\n\n  const whatsappEvents = [];\n  if (payload.object === 'whatsapp_business_account' && Array.isArray(payload.entry)) {\n    for (const entry of payload.entry) {\n      for (const change of entry.changes || []) {\n        const value = change.value || {};\n        for (const message of value.messages || []) {\n          whatsappEvents.push({ value, message, field: change.field });\n        }\n      }\n    }\n  } else if (Array.isArray(payload.messages)) {\n    for (const message of payload.messages) {\n      whatsappEvents.push({ value: payload, message, field: payload.field || 'messages' });\n    }\n  }\n\n  if (whatsappEvents.length) {\n    for (const event of whatsappEvents) {\n      const message = event.message;\n      const text = firstText(\n        message.text?.body,\n        message.button?.text,\n        message.interactive?.button_reply?.title,\n        message.interactive?.list_reply?.title\n      );\n      if (!text) continue;\n      const contact = (event.value.contacts || []).find((candidate) => candidate.wa_id === message.from) || {};\n      results.push({\n        json: {\n          chatInput: text,\n          sessionId: 'whatsapp:' + (message.from || 'unknown'),\n          sourceChannel: 'whatsapp-cloud',\n          sourceMessageId: message.id || '',\n          sourceChatId: message.from || '',\n          sourceSenderId: message.from || '',\n          sourceSenderName: firstText(contact.profile?.name, message.from),\n          rawInput: payload\n        }\n      });\n    }\n    continue;\n  }\n\n  const genericText = firstText(payload.text, payload.message, payload.prompt, query.text);\n  if (genericText) {\n    results.push({\n      json: {\n        chatInput: genericText,\n        sessionId: firstText(payload.sessionId, query.sessionId, 'webhook:generic'),\n        sourceChannel: firstText(payload.sourceChannel, query.sourceChannel, 'webhook'),\n        rawInput: payload\n      }\n    });\n  }\n}\n\nreturn results;"
-      },
-      "id": "49ab696b-87d4-4872-855b-7c76376fe855",
-      "name": "Normalize Incoming Command",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -820,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const query = $input.first().json.query || {};\nif ($env.WHATSAPP_VERIFY_TOKEN && query['hub.verify_token'] !== $env.WHATSAPP_VERIFY_TOKEN) {\n  throw new Error('WhatsApp verify token mismatch');\n}\nreturn [{\n  json: {\n    responseText: query['hub.challenge'] || 'ok'\n  }\n}];"
-      },
-      "id": "f84dc09b-9e52-46ad-92f2-fb671cb75f13",
-      "name": "Verify WhatsApp Challenge",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -940,
-        440
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "text",
-        "responseBody": "={{$json.responseText}}",
-        "options": {}
-      },
-      "id": "b363b4c7-41ab-4670-a626-c87db3ec6770",
-      "name": "WhatsApp Challenge Response",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        -680,
-        440
-      ]
-    },
-    {
-      "parameters": {
-        "color": "#D6EAF8",
-        "width": 780,
-        "height": 520,
-        "content": "# Messaging Entry Points\n\nThis production candidate accepts commands from four sources and normalizes them before the Supervisor:\n\n- n8n chat trigger\n- Telegram webhook: /webhook/personal-productivity/telegram\n- GREEN-API webhook: /webhook/personal-productivity/greenapi\n- WhatsApp Cloud webhook: /webhook/personal-productivity/whatsapp\n\nRecommended security:\n- Set TELEGRAM_WEBHOOK_SECRET_TOKEN and pass it to Telegram setWebhook as secret_token.\n- Set GREENAPI_WEBHOOK_TOKEN and pass it to GREEN-API as webhookUrlToken using Bearer <token>.\n- Set WHATSAPP_VERIFY_TOKEN and use the same token in Meta webhook verification.\n\nThe normalizer ignores GREEN-API non-message status events and WhatsApp status-only events."
-      },
-      "id": "e18cbb5d-488c-45d7-a432-a2e84d5c5937",
-      "name": "Sticky Note - Messaging Entry Points",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -1320,
-        -760
-      ]
-    }
-  ],
-  "active": false,
-  "pinData": {},
-  "settings": {
-    "binaryMode": "separate",
-    "executionOrder": "v1"
-  },
-  "versionId": "4ee5c269-ec03-4b01-b241-6665716ed1b9",
-  "connections": {
-    "Draft_Email": {
-      "ai_tool": [
-        [
-          {
-            "node": "Inbox_Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Inbox_Agent": {
-      "ai_tool": [
-        [
-          {
-            "node": "SUPERVISOR",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Read_Emails": {
-      "ai_tool": [
-        [
-          {
-            "node": "Inbox_Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Simple Memory": {
-      "ai_memory": [
-        [
-          {
-            "node": "SUPERVISOR",
-            "type": "ai_memory",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Calendar_Agent": {
-      "ai_tool": [
-        [
-          {
-            "node": "SUPERVISOR",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Check_Calendar": {
-      "ai_tool": [
-        [
-          {
-            "node": "Calendar_Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Ollama Chat Model - Supervisor": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "SUPERVISOR",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Ollama Chat Model - Inbox": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Inbox_Agent",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Ollama Chat Model - Calendar": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Calendar_Agent",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "When chat message received": {
-      "main": [
-        [
-          {
-            "node": "Normalize Incoming Command",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Load Prompts": {
-      "main": [
-        [
-          {
-            "node": "SUPERVISOR",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Telegram Bot Webhook": {
-      "main": [
-        [
-          {
-            "node": "Normalize Incoming Command",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "GREEN-API Webhook": {
-      "main": [
-        [
-          {
-            "node": "Normalize Incoming Command",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "WhatsApp Cloud Webhook": {
-      "main": [
-        [
-          {
-            "node": "Normalize Incoming Command",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Normalize Incoming Command": {
-      "main": [
-        [
-          {
-            "node": "Load Prompts",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "WhatsApp Cloud Verify": {
-      "main": [
-        [
-          {
-            "node": "Verify WhatsApp Challenge",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Verify WhatsApp Challenge": {
-      "main": [
-        [
-          {
-            "node": "WhatsApp Challenge Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-  }
+    "id":  "ZemG6UGO2KVDib8r",
+    "meta":  {
+                 "instanceId":  "template-instance-id",
+                 "templateCredsSetupCompleted":  false
+             },
+    "name":  "Personal productivity - Gmail Calendar Telegram Approval Ollama v2",
+    "tags":  [
+
+             ],
+    "nodes":  [
+                  {
+                      "id":  "3a5b8268-4355-4a8e-8710-0dff30e21bd8",
+                      "name":  "When chat message received",
+                      "type":  "@n8n/n8n-nodes-langchain.chatTrigger",
+                      "position":  [
+                                       -1240,
+                                       0
+                                   ],
+                      "webhookId":  "915bc421-1a4d-462a-9d1b-00fc63bc8815",
+                      "parameters":  {
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "typeVersion":  1.4
+                  },
+                  {
+                      "id":  "8ad9b3bf-8f3d-49fd-b0f1-9f1e1c6f8f01",
+                      "name":  "Load Prompts",
+                      "type":  "n8n-nodes-base.code",
+                      "position":  [
+                                       -520,
+                                       0
+                                   ],
+                      "parameters":  {
+                                         "jsCode":  "const fs = require(\u0027fs\u0027);\nconst path = require(\u0027path\u0027);\nconst candidateDirs = [\n  $env.PROMPTS_DIR,\n  \u0027/files/git/prompts\u0027,\n  \u0027/git/n8n-workflows/prompts\u0027,\n  \u0027/prompts\u0027\n].filter(Boolean);\n\nfunction readPrompt(fileName) {\n  const tried = [];\n  for (const dir of candidateDirs) {\n    const filePath = path.join(dir, fileName);\n    tried.push(filePath);\n    if (fs.existsSync(filePath)) {\n      return fs.readFileSync(filePath, \u0027utf8\u0027).trim();\n    }\n  }\n  throw new Error(`Prompt file ${fileName} was not found. Tried: ${tried.join(\u0027, \u0027)}`);\n}\n\nreturn $input.all().map((item) =\u003e ({\n  json: {\n    ...item.json,\n    prompts: {\n      supervisor: readPrompt(\u0027supervisor.md\u0027),\n      inbox: readPrompt(\u0027inbox-agent.md\u0027),\n      calendar: readPrompt(\u0027calendar-agent.md\u0027)\n    }\n  }\n}));"
+                                     },
+                      "typeVersion":  2
+                  },
+                  {
+                      "id":  "375580f3-89cb-47ff-9c61-75a744b2c6e9",
+                      "name":  "Ollama Chat Model - Supervisor",
+                      "type":  "@n8n/n8n-nodes-langchain.lmChatOllama",
+                      "position":  [
+                                       -380,
+                                       220
+                                   ],
+                      "parameters":  {
+                                         "model":  "qwen2.5:7b-instruct-q4_K_M",
+                                         "options":  {
+                                                         "temperature":  0.2,
+                                                         "numCtx":  4096
+                                                     }
+                                     },
+                      "credentials":  {
+                                          "ollamaApi":  {
+                                                            "id":  "7BpQwIMWmQjAwS0P",
+                                                            "name":  "Ollama iMAC Mini 192.168.1.10"
+                                                        }
+                                      },
+                      "typeVersion":  1
+                  },
+                  {
+                      "id":  "cc51b3fc-3383-4091-8017-a7cc47692002",
+                      "name":  "Read_Emails",
+                      "type":  "n8n-nodes-base.gmailTool",
+                      "position":  [
+                                       80,
+                                       220
+                                   ],
+                      "webhookId":  "f98c2c89-fe58-4f00-8f33-a4bd9b037823",
+                      "parameters":  {
+                                         "filters":  {
+
+                                                     },
+                                         "operation":  "getAll",
+                                         "descriptionType":  "manual",
+                                         "toolDescription":  "Fetches unread emails from the user\u0027s Gmail inbox. Use this when asked to summarize emails, check for new messages, or retrieve the context of a specific conversation."
+                                     },
+                      "credentials":  {
+                                          "gmailOAuth2":  {
+                                                              "id":  "71ZLCGPi68p95Q8r",
+                                                              "name":  "Gmail account"
+                                                          }
+                                      },
+                      "typeVersion":  2.2
+                  },
+                  {
+                      "id":  "94bbb5d3-dcd4-4402-9ecc-5d449001a0f8",
+                      "name":  "Draft_Email",
+                      "type":  "n8n-nodes-base.gmailTool",
+                      "position":  [
+                                       220,
+                                       220
+                                   ],
+                      "webhookId":  "44a246e0-461c-43cd-8ec7-bdf28c13349e",
+                      "parameters":  {
+                                         "message":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027Message\u0027, ``, \u0027string\u0027) }}",
+                                         "options":  {
+
+                                                     },
+                                         "subject":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027Subject\u0027, ``, \u0027string\u0027) }}",
+                                         "resource":  "draft",
+                                         "descriptionType":  "manual",
+                                         "toolDescription":  "DISCONNECTED SAFETY PLACEHOLDER. Creating a Gmail draft is a Gmail change and must not be available to the AI agent directly. Use only from a native approval executor after Telegram/WhatsApp approval of exact To/Subject/Body."
+                                     },
+                      "credentials":  {
+                                          "gmailOAuth2":  {
+                                                              "id":  "71ZLCGPi68p95Q8r",
+                                                              "name":  "Gmail account"
+                                                          }
+                                      },
+                      "typeVersion":  2.2
+                  },
+                  {
+                      "id":  "c2cdc222-789e-47b2-bf9a-72278b73bdee",
+                      "name":  "Send_Email",
+                      "type":  "n8n-nodes-base.gmailTool",
+                      "position":  [
+                                       360,
+                                       220
+                                   ],
+                      "webhookId":  "71895a77-2550-48ca-8cfd-a99957f85f79",
+                      "parameters":  {
+                                         "sendTo":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027To\u0027, ``, \u0027string\u0027) }}",
+                                         "message":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027Message\u0027, ``, \u0027string\u0027) }}",
+                                         "options":  {
+                                                         "senderName":  "Personal Assistant",
+                                                         "appendAttribution":  false
+                                                     },
+                                         "subject":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027Subject\u0027, ``, \u0027string\u0027) }}",
+                                         "emailType":  "text",
+                                         "descriptionType":  "manual",
+                                         "toolDescription":  "DISCONNECTED SAFETY PLACEHOLDER. Sends email only from a native approval executor after Telegram/WhatsApp approval of exact To/CC/BCC/Subject/Body."
+                                     },
+                      "credentials":  {
+                                          "gmailOAuth2":  {
+                                                              "id":  "71ZLCGPi68p95Q8r",
+                                                              "name":  "Gmail account"
+                                                          }
+                                      },
+                      "typeVersion":  2.2
+                  },
+                  {
+                      "id":  "e0e6bfd8-2bd3-47a7-ad72-1c892c01c1ee",
+                      "name":  "Check_Calendar",
+                      "type":  "n8n-nodes-base.googleCalendarTool",
+                      "position":  [
+                                       720,
+                                       220
+                                   ],
+                      "parameters":  {
+                                         "options":  {
+
+                                                     },
+                                         "timeMax":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027Before\u0027, ``, \u0027string\u0027) }}",
+                                         "timeMin":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027After\u0027, ``, \u0027string\u0027) }}",
+                                         "calendar":  {
+                                                          "__rl":  true,
+                                                          "mode":  "list",
+                                                          "value":  "primary",
+                                                          "cachedResultName":  "Primary Calendar"
+                                                      },
+                                         "operation":  "getAll",
+                                         "descriptionType":  "manual",
+                                         "toolDescription":  "Retrieves events from the user\u0027s Google Calendar for a specified date or time range. Use this to check availability before booking any meeting, or to find the details/ID of an existing meeting before canceling it."
+                                     },
+                      "credentials":  {
+                                          "googleCalendarOAuth2Api":  {
+                                                                          "id":  "EtkIAOrbVaiEzADX",
+                                                                          "name":  "Google Calendar account"
+                                                                      }
+                                      },
+                      "typeVersion":  1.3
+                  },
+                  {
+                      "id":  "9db192a2-a7ba-4778-81a6-9f3a22305e29",
+                      "name":  "Book_Meeting",
+                      "type":  "n8n-nodes-base.googleCalendarTool",
+                      "position":  [
+                                       880,
+                                       220
+                                   ],
+                      "parameters":  {
+                                         "end":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027End\u0027, ``, \u0027string\u0027) }}",
+                                         "start":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027Start\u0027, ``, \u0027string\u0027) }}",
+                                         "calendar":  {
+                                                          "__rl":  true,
+                                                          "mode":  "list",
+                                                          "value":  "primary",
+                                                          "cachedResultName":  "Primary Calendar"
+                                                      },
+                                         "descriptionType":  "manual",
+                                         "toolDescription":  "DISCONNECTED SAFETY PLACEHOLDER. Creates calendar events only from a native approval executor after Telegram/WhatsApp approval of exact title/start/end/location/attendees.",
+                                         "additionalFields":  {
+
+                                                              }
+                                     },
+                      "credentials":  {
+                                          "googleCalendarOAuth2Api":  {
+                                                                          "id":  "EtkIAOrbVaiEzADX",
+                                                                          "name":  "Google Calendar account"
+                                                                      }
+                                      },
+                      "typeVersion":  1.3
+                  },
+                  {
+                      "id":  "0b9a02fa-039c-4061-bbb1-33f4b4508a01",
+                      "name":  "Cancel_Meeting",
+                      "type":  "n8n-nodes-base.googleCalendarTool",
+                      "position":  [
+                                       1200,
+                                       220
+                                   ],
+                      "parameters":  {
+                                         "eventId":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027Event_ID\u0027, ``, \u0027string\u0027) }}",
+                                         "options":  {
+
+                                                     },
+                                         "calendar":  {
+                                                          "__rl":  true,
+                                                          "mode":  "list",
+                                                          "value":  "primary",
+                                                          "cachedResultName":  "Primary Calendar"
+                                                      },
+                                         "operation":  "delete",
+                                         "descriptionType":  "manual",
+                                         "toolDescription":  "DISCONNECTED SAFETY PLACEHOLDER. Cancels calendar events only from a native approval executor after Telegram/WhatsApp approval of the exact event ID."
+                                     },
+                      "credentials":  {
+                                          "googleCalendarOAuth2Api":  {
+                                                                          "id":  "EtkIAOrbVaiEzADX",
+                                                                          "name":  "Google Calendar account"
+                                                                      }
+                                      },
+                      "typeVersion":  1.3
+                  },
+                  {
+                      "id":  "6b36f0d8-edae-4c94-8d19-445d52f40639",
+                      "name":  "Simple Memory",
+                      "type":  "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+                      "position":  [
+                                       -200,
+                                       220
+                                   ],
+                      "parameters":  {
+                                         "sessionKey":  "={{ $json.agentSessions?.supervisor || $json.sessionId }}",
+                                         "sessionIdType":  "customKey",
+                                         "contextWindowLength":  16
+                                     },
+                      "typeVersion":  1.3
+                  },
+                  {
+                      "id":  "5183cbcb-52f9-4460-afd1-fdadd0233dfd",
+                      "name":  "Inbox_Agent",
+                      "type":  "@n8n/n8n-nodes-langchain.agentTool",
+                      "position":  [
+                                       -120,
+                                       0
+                                   ],
+                      "parameters":  {
+                                         "text":  "={{ $node[\"Load Prompts\"].json.prompts.inbox + \"\\n\\n---\\nINSTRUCTIONS FROM SUPERVISOR:\\n\" + $fromAI(\"task\", \"The specific email context, recipient, approval state, and edit commands to execute\", \"string\") }}",
+                                         "options":  {
+
+                                                     },
+                                         "toolDescription":  "Handles safe email operations: reading, summarizing, and proposing reply text only. It cannot create drafts, send, archive, label, or delete email; every Gmail mutation requires a separate native approval executor."
+                                     },
+                      "typeVersion":  3
+                  },
+                  {
+                      "id":  "5e9403f8-70ff-40a0-b1dd-213f65969f44",
+                      "name":  "Calendar_Agent",
+                      "type":  "@n8n/n8n-nodes-langchain.agentTool",
+                      "position":  [
+                                       560,
+                                       0
+                                   ],
+                      "parameters":  {
+                                         "text":  "={{ $node[\"Load Prompts\"].json.prompts.calendar + \"\\n\\n---\\nINSTRUCTIONS FROM SUPERVISOR:\\n\" + $fromAI(\"task\", \"The specific date, time, event ID, approval state, and edit commands to execute\", \"string\") }}",
+                                         "options":  {
+
+                                                     },
+                                         "toolDescription":  "Handles safe calendar operations: reading availability and proposing event changes only. It cannot create, update, cancel, or invite attendees; every Calendar mutation requires a separate native approval executor."
+                                     },
+                      "typeVersion":  3
+                  },
+                  {
+                      "id":  "045d94af-0ac9-4b96-b418-16d5cd87b911",
+                      "name":  "Ollama Chat Model - Inbox",
+                      "type":  "@n8n/n8n-nodes-langchain.lmChatOllama",
+                      "position":  [
+                                       -220,
+                                       220
+                                   ],
+                      "parameters":  {
+                                         "model":  "qwen2.5:7b-instruct-q4_K_M",
+                                         "options":  {
+                                                         "temperature":  0.2,
+                                                         "numCtx":  4096
+                                                     }
+                                     },
+                      "credentials":  {
+                                          "ollamaApi":  {
+                                                            "id":  "7BpQwIMWmQjAwS0P",
+                                                            "name":  "Ollama iMAC Mini 192.168.1.10"
+                                                        }
+                                      },
+                      "typeVersion":  1
+                  },
+                  {
+                      "id":  "363ad001-5220-4b24-8331-4aa2fa469d65",
+                      "name":  "Ollama Chat Model - Calendar",
+                      "type":  "@n8n/n8n-nodes-langchain.lmChatOllama",
+                      "position":  [
+                                       480,
+                                       220
+                                   ],
+                      "parameters":  {
+                                         "model":  "qwen2.5:7b-instruct-q4_K_M",
+                                         "options":  {
+                                                         "temperature":  0.2,
+                                                         "numCtx":  4096
+                                                     }
+                                     },
+                      "credentials":  {
+                                          "ollamaApi":  {
+                                                            "id":  "7BpQwIMWmQjAwS0P",
+                                                            "name":  "Ollama iMAC Mini 192.168.1.10"
+                                                        }
+                                      },
+                      "typeVersion":  1
+                  },
+                  {
+                      "id":  "557476f2-497a-46a8-ba0c-fd0dc59a14f8",
+                      "name":  "SUPERVISOR",
+                      "type":  "@n8n/n8n-nodes-langchain.agent",
+                      "position":  [
+                                       -340,
+                                       0
+                                   ],
+                      "parameters":  {
+                                         "text":  "={{ $json.chatInput }}",
+                                         "options":  {
+                                                         "systemMessage":  "={{ $json.prompts.supervisor }}"
+                                                     },
+                                         "promptType":  "define"
+                                     },
+                      "typeVersion":  3.1
+                  },
+                  {
+                      "id":  "e9d609c2-7272-4381-87ae-c255f5006ca8",
+                      "name":  "Sticky Note",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "position":  [
+                                       -1120,
+                                       -520
+                                   ],
+                      "parameters":  {
+                                         "color":  "#E0BEBE",
+                                         "width":  440,
+                                         "height":  260,
+                                         "content":  "# Chat Entry Point\n\nStarts when a user sends a message through n8n Chat.\n\nExamples:\n- Summarize unread emails\n- Draft a reply\n- Find calendar availability\n- Book a meeting after approval"
+                                     },
+                      "typeVersion":  1
+                  },
+                  {
+                      "id":  "9cdd8a37-e5de-4de6-b83e-99a2131de7b5",
+                      "name":  "Sticky Note1",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "position":  [
+                                       -640,
+                                       -520
+                                   ],
+                      "parameters":  {
+                                         "color":  "#CFB5D9",
+                                         "width":  440,
+                                         "height":  260,
+                                         "content":  "# Supervisor AI Agent\n\nRoutes user requests to the Inbox or Calendar specialist.\n\nThe Supervisor must ask for explicit approval before instructing tools to send email or change calendar events."
+                                     },
+                      "typeVersion":  1
+                  },
+                  {
+                      "id":  "d9404c29-452e-4c8b-9149-287dbedefe50",
+                      "name":  "Sticky Note2",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "position":  [
+                                       -1120,
+                                       820
+                                   ],
+                      "parameters":  {
+                                         "color":  "#FF6B6B",
+                                         "width":  500,
+                                         "height":  300,
+                                         "content":  "# Ollama Configuration\n\nConfigured credential: Ollama iMAC Mini 192.168.1.10.\n\nConfirm the base URL and model are reachable from the n8n container before activating a new import."
+                                     },
+                      "typeVersion":  1
+                  },
+                  {
+                      "id":  "19972343-faba-4f83-a512-2ca989bb77c9",
+                      "name":  "Sticky Note3",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "position":  [
+                                       -560,
+                                       820
+                                   ],
+                      "parameters":  {
+                                         "color":  "#FF6B6B",
+                                         "width":  520,
+                                         "height":  320,
+                                         "content":  "# Gmail Configuration\n\nConfigured credential: Gmail account.\n\nRequired safety test:\n- Read email\n- Create draft\n- Send only after explicit approval command"
+                                     },
+                      "typeVersion":  1
+                  },
+                  {
+                      "id":  "4572dd20-170a-429a-b8ab-73747131645c",
+                      "name":  "Sticky Note4",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "position":  [
+                                       640,
+                                       820
+                                   ],
+                      "parameters":  {
+                                         "color":  "#FF6B6B",
+                                         "width":  560,
+                                         "height":  340,
+                                         "content":  "# ACTION TOOLS HARD-DISCONNECTED\\n\\nThe following Gmail/Calendar mutation tools remain on the canvas but are not connected as AI tools:\\n- Draft_Email\\n- Send_Email\\n- Book_Meeting\\n- Update_Meeting\\n- Cancel_Meeting\\n\\nThis is an enforced graph-level safety gate, not just a prompt rule. The assistant may read Gmail and Calendar, summarize, and propose exact changes, but it cannot mutate Gmail or Calendar from the AI agent path.\\n\\nOnly reconnect these through a native approval executor that applies a stored, exact action after the user approves through Telegram or WhatsApp."
+                                     },
+                      "typeVersion":  1
+                  },
+                  {
+                      "id":  "e288df9a-6ced-46fa-8526-1595b91843a4",
+                      "name":  "Sticky Note5",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "position":  [
+                                       20,
+                                       820
+                                   ],
+                      "parameters":  {
+                                         "color":  "#FF6B6B",
+                                         "width":  560,
+                                         "height":  340,
+                                         "content":  "# Google Calendar Configuration\n\nConfigured credential: Google Calendar account.\n\nRequired safety test:\n- Check availability first\n- Book/update/cancel only after explicit approval command"
+                                     },
+                      "typeVersion":  1
+                  },
+                  {
+                      "id":  "fe670176-17b4-494c-a0b2-1a7dc2a485b2",
+                      "name":  "Sticky Note6",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "position":  [
+                                       -160,
+                                       -520
+                                   ],
+                      "parameters":  {
+                                         "color":  "#ECDD93",
+                                         "width":  500,
+                                         "height":  260,
+                                         "content":  "# Workflow Overview\\n\\nSafe personal productivity assistant.\\n\\nThe graph contains read-only Gmail and Calendar tools plus hard-disconnected mutation placeholders.\\n\\nSession memory is partitioned by agent role:\\n- supervisor\\n- inbox\\n- calendar\\n\\nThis prevents one specialist\u0027s local thread state from bleeding into another specialist\u0027s memory window."
+                                     },
+                      "typeVersion":  1
+                  },
+                  {
+                      "id":  "61215e2d-9396-4552-914d-62c1cbecf054",
+                      "name":  "Update_Meeting",
+                      "type":  "n8n-nodes-base.googleCalendarTool",
+                      "position":  [
+                                       1040,
+                                       220
+                                   ],
+                      "parameters":  {
+                                         "eventId":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027Event_ID\u0027, ``, \u0027string\u0027) }}",
+                                         "calendar":  {
+                                                          "__rl":  true,
+                                                          "mode":  "list",
+                                                          "value":  "primary",
+                                                          "cachedResultName":  "Primary Calendar"
+                                                      },
+                                         "operation":  "update",
+                                         "start":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027Start\u0027, ``, \u0027string\u0027) }}",
+                                         "end":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027End\u0027, ``, \u0027string\u0027) }}",
+                                         "descriptionType":  "manual",
+                                         "toolDescription":  "DISCONNECTED SAFETY PLACEHOLDER. Updates calendar events only from a native approval executor after Telegram/WhatsApp approval of exact event ID and changes.",
+                                         "additionalFields":  {
+                                                                  "summary":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027Title\u0027, ``, \u0027string\u0027) }}",
+                                                                  "description":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027Description\u0027, ``, \u0027string\u0027) }}",
+                                                                  "location":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027Location\u0027, ``, \u0027string\u0027) }}"
+                                                              }
+                                     },
+                      "credentials":  {
+                                          "googleCalendarOAuth2Api":  {
+                                                                          "id":  "EtkIAOrbVaiEzADX",
+                                                                          "name":  "Google Calendar account"
+                                                                      }
+                                      },
+                      "typeVersion":  1.3
+                  },
+                  {
+                      "id":  "b20383e3-1887-4121-8d52-1eef6b846995",
+                      "name":  "Sticky Note - Telegram Approval Editing",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "position":  [
+                                       380,
+                                       -520
+                                   ],
+                      "parameters":  {
+                                         "color":  "#F3DFA2",
+                                         "width":  640,
+                                         "height":  360,
+                                         "content":  "# Approval / Editing Protocol\\n\\nFor any Gmail or Calendar mutation, the assistant must respond with:\\n\\nAPPROVAL_REQUIRED\\nAction: ...\\nExact details: ...\\nApprove with /approve only after reviewing.\\nReject with /reject.\\n\\nSupported edit commands before approval:\\n- /to, /cc, /bcc, /subject, /body\\n- /title, /time, /location, /notes, /attendees\\n\\nThe graph currently sends Telegram-triggered approval/proposal text back to Telegram and does not execute Gmail/Calendar mutations."
+                                     },
+                      "typeVersion":  1
+                  },
+                  {
+                      "parameters":  {
+                                         "color":  "#FF6B6B",
+                                         "width":  620,
+                                         "height":  460,
+                                         "content":  "# REQUIRED BEFORE PRODUCTION\\n\\nComplete these items before activating this workflow:\\n\\n## n8n production checklist\\n- Set up error notifications or an error workflow.\\n- Configure time saved tracking if you want reporting.\\n- Enable MCP access only if this workflow must be exposed to MCP clients.\\n\\n## Credentials and models\\n- Configure all red credential notes on this canvas.\\n- Confirm Gmail, Calendar, Telegram, WhatsApp/GreenAPI, and Ollama permissions before activation.\\n\\n## Safety review\\n- Gmail/Calendar mutation tools are hard-disconnected from AI agents.\\n- Read-only Gmail and Calendar tools remain connected.\\n- Telegram-triggered mutation requests receive approval/proposal text, but no Gmail/Calendar mutation is executed by this graph.\\n- Add a native approval executor before enabling real write actions."
+                                     },
+                      "id":  "4ab2506b-46b2-4e48-88c3-1e36292914aa",
+                      "name":  "Sticky Note - Required Production Setup",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "typeVersion":  1,
+                      "position":  [
+                                       -1120,
+                                       -1040
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "personal-productivity/telegram",
+                                         "responseMode":  "onReceived",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "a0c86d10-70e8-4110-a51a-0c9879b1c510",
+                      "name":  "Telegram Bot Webhook",
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1240,
+                                       -300
+                                   ],
+                      "webhookId":  "personal-productivity-telegram"
+                  },
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "personal-productivity/greenapi",
+                                         "responseMode":  "onReceived",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "f6bd05f5-d066-4ab5-84d1-e7bf2f3185de",
+                      "name":  "GREEN-API Webhook",
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1240,
+                                       -120
+                                   ],
+                      "webhookId":  "personal-productivity-greenapi"
+                  },
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "personal-productivity/whatsapp",
+                                         "responseMode":  "onReceived",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "6371914d-c09d-42f1-8d4b-d5a03fe96d8f",
+                      "name":  "WhatsApp Cloud Webhook",
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1240,
+                                       180
+                                   ],
+                      "webhookId":  "personal-productivity-whatsapp"
+                  },
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "GET",
+                                         "path":  "personal-productivity/whatsapp",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "ca8456b8-f45a-498c-8823-ed59294fbf3e",
+                      "name":  "WhatsApp Cloud Verify",
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -1240,
+                                       440
+                                   ],
+                      "webhookId":  "personal-productivity-whatsapp-verify"
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "function firstText(...values) {\n  for (const value of values) {\n    if (typeof value === \u0027string\u0027 \u0026\u0026 value.trim()) return value.trim();\n  }\n  return \u0027\u0027;\n}\n\nfunction header(headers, name) {\n  if (!headers) return \u0027\u0027;\n  const target = name.toLowerCase();\n  const key = Object.keys(headers).find((candidate) =\u003e candidate.toLowerCase() === target);\n  return key ? String(headers[key]) : \u0027\u0027;\n}\n\nfunction requireBearer(headers, expected, channel) {\n  if (!expected) return;\n  const auth = header(headers, \u0027authorization\u0027);\n  if (auth !== \u0027Bearer \u0027 + expected) {\n    throw new Error(channel + \u0027 webhook authorization failed\u0027);\n  }\n}\n\nfunction requireTelegramSecret(headers) {\n  if (!$env.TELEGRAM_WEBHOOK_SECRET_TOKEN) return;\n  if (header(headers, \u0027x-telegram-bot-api-secret-token\u0027) !== $env.TELEGRAM_WEBHOOK_SECRET_TOKEN) {\n    throw new Error(\u0027Telegram webhook secret token mismatch\u0027);\n  }\n}\n\nfunction senderName(user) {\n  return firstText(\n    user?.username \u0026\u0026 \u0027@\u0027 + user.username,\n    [user?.first_name, user?.last_name].filter(Boolean).join(\u0027 \u0027),\n    user?.pushName,\n    user?.senderName,\n    user?.displayName\n  );\n}\n\nconst results = [];\n\nfor (const input of $input.all()) {\n  const item = input.json || {};\n  const headers = item.headers || {};\n  const query = item.query || {};\n  const payload = item.body \u0026\u0026 (item.headers || item.query) ? item.body : item;\n\n  if (firstText(payload.chatInput, item.chatInput)) {\n    results.push({\n      json: {\n        ...payload,\n        chatInput: firstText(payload.chatInput, item.chatInput),\n        sessionId: firstText(payload.sessionId, item.sessionId, \u0027n8n-chat\u0027),\n        sourceChannel: firstText(payload.sourceChannel, item.sourceChannel, \u0027n8n-chat\u0027)\n      }\n    });\n    continue;\n  }\n\n  const telegramMessage = payload.message || payload.edited_message || payload.channel_post || payload.callback_query?.message;\n  if (telegramMessage || payload.callback_query) {\n    requireTelegramSecret(headers);\n    const text = firstText(\n      telegramMessage?.text,\n      telegramMessage?.caption,\n      payload.callback_query?.data\n    );\n    if (!text) continue;\n    const chatId = telegramMessage?.chat?.id || payload.callback_query?.message?.chat?.id || payload.callback_query?.from?.id;\n    const from = telegramMessage?.from || payload.callback_query?.from || {};\n    results.push({\n      json: {\n        chatInput: text,\n        sessionId: \u0027telegram:\u0027 + (chatId || from.id || payload.update_id || \u0027unknown\u0027),\n        sourceChannel: \u0027telegram\u0027,\n        sourceMessageId: telegramMessage?.message_id || payload.callback_query?.id || \u0027\u0027,\n        sourceChatId: chatId || \u0027\u0027,\n        sourceSenderId: from.id || \u0027\u0027,\n        sourceSenderName: senderName(from),\n        rawInput: payload\n      }\n    });\n    continue;\n  }\n\n  if (payload.typeWebhook || payload.senderData || payload.messageData) {\n    requireBearer(headers, $env.GREENAPI_WEBHOOK_TOKEN, \u0027GREEN-API\u0027);\n    if (payload.typeWebhook \u0026\u0026 payload.typeWebhook !== \u0027incomingMessageReceived\u0027) continue;\n    const messageData = payload.messageData || {};\n    const textData = messageData.textMessageData || {};\n    const extendedTextData = messageData.extendedTextMessageData || {};\n    const fileData = messageData.fileMessageData || {};\n    const text = firstText(\n      textData.textMessage,\n      extendedTextData.text,\n      fileData.caption,\n      messageData?.quotedMessage?.textMessage,\n      messageData?.buttonMessageData?.buttonText\n    );\n    if (!text) continue;\n    const chatId = payload.senderData?.chatId || payload.senderData?.sender || payload.chatId || \u0027unknown\u0027;\n    results.push({\n      json: {\n        chatInput: text,\n        sessionId: \u0027greenapi:\u0027 + chatId,\n        sourceChannel: \u0027greenapi\u0027,\n        sourceMessageId: payload.idMessage || \u0027\u0027,\n        sourceChatId: chatId,\n        sourceSenderId: payload.senderData?.sender || \u0027\u0027,\n        sourceSenderName: firstText(payload.senderData?.senderName, payload.senderData?.chatName),\n        rawInput: payload\n      }\n    });\n    continue;\n  }\n\n  const whatsappEvents = [];\n  if (payload.object === \u0027whatsapp_business_account\u0027 \u0026\u0026 Array.isArray(payload.entry)) {\n    for (const entry of payload.entry) {\n      for (const change of entry.changes || []) {\n        const value = change.value || {};\n        for (const message of value.messages || []) {\n          whatsappEvents.push({ value, message, field: change.field });\n        }\n      }\n    }\n  } else if (Array.isArray(payload.messages)) {\n    for (const message of payload.messages) {\n      whatsappEvents.push({ value: payload, message, field: payload.field || \u0027messages\u0027 });\n    }\n  }\n\n  if (whatsappEvents.length) {\n    for (const event of whatsappEvents) {\n      const message = event.message;\n      const text = firstText(\n        message.text?.body,\n        message.button?.text,\n        message.interactive?.button_reply?.title,\n        message.interactive?.list_reply?.title\n      );\n      if (!text) continue;\n      const contact = (event.value.contacts || []).find((candidate) =\u003e candidate.wa_id === message.from) || {};\n      results.push({\n        json: {\n          chatInput: text,\n          sessionId: \u0027whatsapp:\u0027 + (message.from || \u0027unknown\u0027),\n          sourceChannel: \u0027whatsapp-cloud\u0027,\n          sourceMessageId: message.id || \u0027\u0027,\n          sourceChatId: message.from || \u0027\u0027,\n          sourceSenderId: message.from || \u0027\u0027,\n          sourceSenderName: firstText(contact.profile?.name, message.from),\n          rawInput: payload\n        }\n      });\n    }\n    continue;\n  }\n\n  const genericText = firstText(payload.text, payload.message, payload.prompt, query.text);\n  if (genericText) {\n    results.push({\n      json: {\n        chatInput: genericText,\n        sessionId: firstText(payload.sessionId, query.sessionId, \u0027webhook:generic\u0027),\n        sourceChannel: firstText(payload.sourceChannel, query.sourceChannel, \u0027webhook\u0027),\n        rawInput: payload\n      }\n    });\n  }\n}\n\nfor (const result of results) {\n  const sessionId = firstText(result.json?.sessionId, \u0027unknown\u0027);\n  result.json.agentSessions = {\n    supervisor: sessionId + \u0027:supervisor\u0027,\n    inbox: sessionId + \u0027:inbox\u0027,\n    calendar: sessionId + \u0027:calendar\u0027\n  };\n}\n\nreturn results;"
+                                     },
+                      "id":  "49ab696b-87d4-4872-855b-7c76376fe855",
+                      "name":  "Normalize Incoming Command",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -820,
+                                       0
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const query = $input.first().json.query || {};\nif ($env.WHATSAPP_VERIFY_TOKEN \u0026\u0026 query[\u0027hub.verify_token\u0027] !== $env.WHATSAPP_VERIFY_TOKEN) {\n  throw new Error(\u0027WhatsApp verify token mismatch\u0027);\n}\nreturn [{\n  json: {\n    responseText: query[\u0027hub.challenge\u0027] || \u0027ok\u0027\n  }\n}];"
+                                     },
+                      "id":  "f84dc09b-9e52-46ad-92f2-fb671cb75f13",
+                      "name":  "Verify WhatsApp Challenge",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -940,
+                                       440
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "text",
+                                         "responseBody":  "={{$json.responseText}}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "b363b4c7-41ab-4670-a626-c87db3ec6770",
+                      "name":  "WhatsApp Challenge Response",
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       -680,
+                                       440
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "color":  "#D6EAF8",
+                                         "width":  780,
+                                         "height":  520,
+                                         "content":  "# Messaging Entry Points\n\nThis production candidate accepts commands from four sources and normalizes them before the Supervisor:\n\n- n8n chat trigger\n- Telegram webhook: /webhook/personal-productivity/telegram\n- GREEN-API webhook: /webhook/personal-productivity/greenapi\n- WhatsApp Cloud webhook: /webhook/personal-productivity/whatsapp\n\nRecommended security:\n- Set TELEGRAM_WEBHOOK_SECRET_TOKEN and pass it to Telegram setWebhook as secret_token.\n- Set GREENAPI_WEBHOOK_TOKEN and pass it to GREEN-API as webhookUrlToken using Bearer \u003ctoken\u003e.\n- Set WHATSAPP_VERIFY_TOKEN and use the same token in Meta webhook verification.\n\nThe normalizer ignores GREEN-API non-message status events and WhatsApp status-only events."
+                                     },
+                      "id":  "e18cbb5d-488c-45d7-a432-a2e84d5c5937",
+                      "name":  "Sticky Note - Messaging Entry Points",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "typeVersion":  1,
+                      "position":  [
+                                       -1320,
+                                       -760
+                                   ]
+                  },
+                  {
+                      "id":  "4d931b42-e3ad-486d-8db6-029a013703f5",
+                      "name":  "Prepare Telegram Approval Notice",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -80,
+                                       -260
+                                   ],
+                      "parameters":  {
+                                         "jsCode":  "function firstText(...values) {\n  for (const value of values) {\n    if (typeof value === \u0027string\u0027 \u0026\u0026 value.trim()) return value.trim();\n  }\n  return \u0027\u0027;\n}\n\nconst agent = $input.first().json || {};\nlet source = {};\ntry {\n  source = $(\u0027Normalize Incoming Command\u0027).first().json || {};\n} catch (error) {\n  try {\n    source = $node[\u0027Normalize Incoming Command\u0027].json || {};\n  } catch {}\n}\n\nconst responseText = firstText(\n  agent.output,\n  agent.text,\n  agent.response,\n  agent.answer,\n  agent.message,\n  agent.result\n);\n\nif (!responseText || source.sourceChannel !== \u0027telegram\u0027) {\n  return [];\n}\n\nconst approvalRequest = /\\bAPPROVAL_REQUIRED\\b|approval required|\\/approve|\\/reject/i.test(responseText);\nconst mutatingIntent = /\\b(send|draft|reply|email|book|schedule|reschedule|update|cancel|delete|archive|label|invite)\\b/i.test(source.chatInput || \u0027\u0027);\nconst chatId = source.sourceChatId || $env.TELEGRAM_APPROVAL_CHAT_ID;\n\nif (!chatId || (!approvalRequest \u0026\u0026 !mutatingIntent)) {\n  return [];\n}\n\nconst prefix = approvalRequest\n  ? \u0027Approval required before any Gmail or Calendar change:\\n\\n\u0027\n  : \u0027No Gmail or Calendar change was executed. Review this proposal first:\\n\\n\u0027;\n\nreturn [{\n  json: {\n    chatId,\n    responseText: prefix + responseText,\n    sourceChannel: source.sourceChannel,\n    sourceChatId: source.sourceChatId,\n    originalCommand: source.chatInput\n  }\n}];"
+                                     }
+                  },
+                  {
+                      "id":  "7238458e-4931-4352-9222-9e09cb0744a0",
+                      "name":  "Send Telegram Approval Notice",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       180,
+                                       -260
+                                   ],
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{\u0027https://api.telegram.org/bot\u0027 + $env.TELEGRAM_BOT_TOKEN + \u0027/sendMessage\u0027}}",
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ chat_id: $json.chatId, text: $json.responseText }) }}",
+                                         "options":  {
+
+                                                     }
+                                     }
+                  },
+                  {
+                      "id":  "cbf975ef-d3b3-4456-b2d9-eaf8cf3c91ce",
+                      "name":  "Sticky Note - Native Approval Gap",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "typeVersion":  1,
+                      "position":  [
+                                       1060,
+                                       -520
+                                   ],
+                      "parameters":  {
+                                         "color":  "#F3DFA2",
+                                         "width":  600,
+                                         "height":  360,
+                                         "content":  "# Native Approval Executor Required\\n\\nThis workflow now blocks all Gmail/Calendar mutation tools from AI-agent access.\\n\\nTo enable real approved writes later, add a separate native executor that:\\n1. Stores an exact pending action payload.\\n2. Sends approval buttons/commands through Telegram or WhatsApp.\\n3. On /approve, validates action id, user, and expiry.\\n4. Executes the matching Gmail or Calendar node with the stored payload.\\n\\nDo not reconnect mutation tools directly to the AI agent."
+                                     }
+                  },
+                  {
+                      "id":  "b58862aa-5513-4dc9-9132-87d69913d849",
+                      "name":  "Inbox Memory",
+                      "type":  "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+                      "position":  [
+                                       -60,
+                                       220
+                                   ],
+                      "parameters":  {
+                                         "sessionKey":  "={{ $json.agentSessions?.inbox || ($json.sessionId + \":inbox\") }}",
+                                         "sessionIdType":  "customKey",
+                                         "contextWindowLength":  12
+                                     },
+                      "typeVersion":  1.3
+                  },
+                  {
+                      "id":  "2ce94637-b881-442f-b5d3-7eeec5b66c4d",
+                      "name":  "Calendar Memory",
+                      "type":  "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+                      "position":  [
+                                       640,
+                                       220
+                                   ],
+                      "parameters":  {
+                                         "sessionKey":  "={{ $json.agentSessions?.calendar || ($json.sessionId + \":calendar\") }}",
+                                         "sessionIdType":  "customKey",
+                                         "contextWindowLength":  12
+                                     },
+                      "typeVersion":  1.3
+                  }
+              ],
+    "active":  false,
+    "pinData":  {
+
+                },
+    "settings":  {
+                     "binaryMode":  "separate",
+                     "executionOrder":  "v1",
+                     "errorWorkflow":  "WvgstjebRaEcxDvf"
+                 },
+    "versionId":  "4ee5c269-ec03-4b01-b241-6665716ed1b9",
+    "connections":  {
+                        "Inbox_Agent":  {
+                                            "ai_tool":  [
+                                                            [
+                                                                {
+                                                                    "node":  "SUPERVISOR",
+                                                                    "type":  "ai_tool",
+                                                                    "index":  0
+                                                                }
+                                                            ]
+                                                        ]
+                                        },
+                        "Read_Emails":  {
+                                            "ai_tool":  [
+                                                            [
+                                                                {
+                                                                    "node":  "Inbox_Agent",
+                                                                    "type":  "ai_tool",
+                                                                    "index":  0
+                                                                }
+                                                            ]
+                                                        ]
+                                        },
+                        "Simple Memory":  {
+                                              "ai_memory":  [
+                                                                [
+                                                                    {
+                                                                        "node":  "SUPERVISOR",
+                                                                        "type":  "ai_memory",
+                                                                        "index":  0
+                                                                    }
+                                                                ]
+                                                            ]
+                                          },
+                        "Calendar_Agent":  {
+                                               "ai_tool":  [
+                                                               [
+                                                                   {
+                                                                       "node":  "SUPERVISOR",
+                                                                       "type":  "ai_tool",
+                                                                       "index":  0
+                                                                   }
+                                                               ]
+                                                           ]
+                                           },
+                        "Check_Calendar":  {
+                                               "ai_tool":  [
+                                                               [
+                                                                   {
+                                                                       "node":  "Calendar_Agent",
+                                                                       "type":  "ai_tool",
+                                                                       "index":  0
+                                                                   }
+                                                               ]
+                                                           ]
+                                           },
+                        "Ollama Chat Model - Supervisor":  {
+                                                               "ai_languageModel":  [
+                                                                                        [
+                                                                                            {
+                                                                                                "node":  "SUPERVISOR",
+                                                                                                "type":  "ai_languageModel",
+                                                                                                "index":  0
+                                                                                            }
+                                                                                        ]
+                                                                                    ]
+                                                           },
+                        "Ollama Chat Model - Inbox":  {
+                                                          "ai_languageModel":  [
+                                                                                   [
+                                                                                       {
+                                                                                           "node":  "Inbox_Agent",
+                                                                                           "type":  "ai_languageModel",
+                                                                                           "index":  0
+                                                                                       }
+                                                                                   ]
+                                                                               ]
+                                                      },
+                        "Ollama Chat Model - Calendar":  {
+                                                             "ai_languageModel":  [
+                                                                                      [
+                                                                                          {
+                                                                                              "node":  "Calendar_Agent",
+                                                                                              "type":  "ai_languageModel",
+                                                                                              "index":  0
+                                                                                          }
+                                                                                      ]
+                                                                                  ]
+                                                         },
+                        "When chat message received":  {
+                                                           "main":  [
+                                                                        [
+                                                                            {
+                                                                                "node":  "Normalize Incoming Command",
+                                                                                "type":  "main",
+                                                                                "index":  0
+                                                                            }
+                                                                        ]
+                                                                    ]
+                                                       },
+                        "Load Prompts":  {
+                                             "main":  [
+                                                          [
+                                                              {
+                                                                  "node":  "SUPERVISOR",
+                                                                  "type":  "main",
+                                                                  "index":  0
+                                                              }
+                                                          ]
+                                                      ]
+                                         },
+                        "Telegram Bot Webhook":  {
+                                                     "main":  [
+                                                                  [
+                                                                      {
+                                                                          "node":  "Normalize Incoming Command",
+                                                                          "type":  "main",
+                                                                          "index":  0
+                                                                      }
+                                                                  ]
+                                                              ]
+                                                 },
+                        "GREEN-API Webhook":  {
+                                                  "main":  [
+                                                               [
+                                                                   {
+                                                                       "node":  "Normalize Incoming Command",
+                                                                       "type":  "main",
+                                                                       "index":  0
+                                                                   }
+                                                               ]
+                                                           ]
+                                              },
+                        "WhatsApp Cloud Webhook":  {
+                                                       "main":  [
+                                                                    [
+                                                                        {
+                                                                            "node":  "Normalize Incoming Command",
+                                                                            "type":  "main",
+                                                                            "index":  0
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                   },
+                        "Normalize Incoming Command":  {
+                                                           "main":  [
+                                                                        [
+                                                                            {
+                                                                                "node":  "Load Prompts",
+                                                                                "type":  "main",
+                                                                                "index":  0
+                                                                            }
+                                                                        ]
+                                                                    ]
+                                                       },
+                        "WhatsApp Cloud Verify":  {
+                                                      "main":  [
+                                                                   [
+                                                                       {
+                                                                           "node":  "Verify WhatsApp Challenge",
+                                                                           "type":  "main",
+                                                                           "index":  0
+                                                                       }
+                                                                   ]
+                                                               ]
+                                                  },
+                        "Verify WhatsApp Challenge":  {
+                                                          "main":  [
+                                                                       [
+                                                                           {
+                                                                               "node":  "WhatsApp Challenge Response",
+                                                                               "type":  "main",
+                                                                               "index":  0
+                                                                           }
+                                                                       ]
+                                                                   ]
+                                                      },
+                        "SUPERVISOR":  {
+                                           "main":  [
+                                                        [
+                                                            {
+                                                                "node":  "Prepare Telegram Approval Notice",
+                                                                "type":  "main",
+                                                                "index":  0
+                                                            }
+                                                        ]
+                                                    ]
+                                       },
+                        "Prepare Telegram Approval Notice":  {
+                                                                 "main":  [
+                                                                              [
+                                                                                  {
+                                                                                      "node":  "Send Telegram Approval Notice",
+                                                                                      "type":  "main",
+                                                                                      "index":  0
+                                                                                  }
+                                                                              ]
+                                                                          ]
+                                                             },
+                        "Inbox Memory":  {
+                                             "ai_memory":  [
+                                                               [
+                                                                   {
+                                                                       "node":  "Inbox_Agent",
+                                                                       "type":  "ai_memory",
+                                                                       "index":  0
+                                                                   }
+                                                               ]
+                                                           ]
+                                         },
+                        "Calendar Memory":  {
+                                                "ai_memory":  [
+                                                                  [
+                                                                      {
+                                                                          "node":  "Calendar_Agent",
+                                                                          "type":  "ai_memory",
+                                                                          "index":  0
+                                                                      }
+                                                                  ]
+                                                              ]
+                                            }
+                    }
 }
