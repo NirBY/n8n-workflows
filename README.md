@@ -185,6 +185,8 @@ TELEGRAM_BOT_TOKEN=telegram-bot-token-from-botfather
 TELEGRAM_APPROVAL_CHAT_ID=telegram-chat-id-that-receives-approval-messages
 TELEGRAM_ERROR_CHAT_ID=telegram-chat-id-that-receives-error-alerts
 N8N_ERROR_DLQ_PATH=/files/dlq/n8n-errors.jsonl
+N8N_FILES_ALLOWLIST=/files
+N8N_RESTRICT_FILE_ACCESS_TO=/files
 NODES_EXCLUDE=[]
 ```
 
@@ -256,6 +258,8 @@ Required environment variables:
 TELEGRAM_BOT_TOKEN=telegram-bot-token
 TELEGRAM_ERROR_CHAT_ID=telegram-chat-id
 N8N_ERROR_DLQ_PATH=/files/dlq/n8n-errors.jsonl
+N8N_FILES_ALLOWLIST=/files
+N8N_RESTRICT_FILE_ACCESS_TO=/files
 PUBLIC_N8N_BASE_URL=https://your-n8n-host
 ```
 
