@@ -326,6 +326,9 @@ for (const required of [
   'DEPLOY_GIT_REPO_DIR',
   'TELEGRAM_ERROR_CHAT_ID',
   'N8N_ERROR_DLQ_PATH',
+  'N8N_FILES_ALLOWLIST',
+  'N8N_RESTRICT_FILE_ACCESS_TO',
+  'NODE_FUNCTION_ALLOW_BUILTIN',
 ]) {
   const envExample = readText('.env.example');
   const compose = readText('docker/docker-compose.yml');

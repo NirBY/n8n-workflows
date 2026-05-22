@@ -187,6 +187,7 @@ TELEGRAM_ERROR_CHAT_ID=telegram-chat-id-that-receives-error-alerts
 N8N_ERROR_DLQ_PATH=/files/dlq/n8n-errors.jsonl
 N8N_FILES_ALLOWLIST=/files
 N8N_RESTRICT_FILE_ACCESS_TO=/files
+NODE_FUNCTION_ALLOW_BUILTIN=fs,path
 NODES_EXCLUDE=[]
 ```
 
@@ -260,6 +261,7 @@ TELEGRAM_ERROR_CHAT_ID=telegram-chat-id
 N8N_ERROR_DLQ_PATH=/files/dlq/n8n-errors.jsonl
 N8N_FILES_ALLOWLIST=/files
 N8N_RESTRICT_FILE_ACCESS_TO=/files
+NODE_FUNCTION_ALLOW_BUILTIN=fs,path
 PUBLIC_N8N_BASE_URL=https://your-n8n-host
 ```
 
